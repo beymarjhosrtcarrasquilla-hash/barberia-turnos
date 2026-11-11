@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lab: galería comparativa</title>
+<style>
+body{margin:0;background:#111;color:#eee;font-family:Segoe UI,sans-serif}
+header{padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.row{display:flex;gap:20px;padding:20px;overflow-x:auto}
+.card{flex:0 0 auto;text-align:center}
+iframe{width:300px;height:520px;border:6px solid #333;border-radius:24px;background:#fff}
+.card.sel iframe{border-color:#d4a037}
+button{padding:8px 14px;border-radius:8px;border:0;cursor:pointer}
+#elegida{color:#d4a037}
+</style></head><body>
+<header><b>Galería de propuestas (demo, no es un diseñador visual)</b><span>Elegida: <b id="elegida">ninguna</b></span></header>
+<div class="row" id="row"></div>
+<script>
+const p=['a','b','c'];const row=document.getElementById('row');
+p.forEach(k=>{const d=document.createElement('div');d.className='card';
+d.innerHTML=`<p>Propuesta ${k.toUpperCase()} · <a style="color:#d4a037" target="_blank" href="propuesta-${k}.html">abrir</a></p><iframe src="propuesta-${k}.html"></iframe><p><button>Elegir ${k.toUpperCase()}</button></p>`;
+d.querySelector('button').onclick=()=>{document.querySelectorAll('.card').forEach(c=>c.classList.remove('sel'));d.classList.add('sel');document.getElementById('elegida').textContent=k.toUpperCase();localStorage.setItem('lab_elegida',k)};
+row.appendChild(d)});
+const s=localStorage.getItem('lab_elegida');if(s){document.getElementById('elegida').textContent=s.toUpperCase();row.children[p.indexOf(s)].classList.add('sel')}
+</script></body></html>

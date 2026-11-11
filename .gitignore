@@ -1,0 +1,40 @@
+# Dependencias
+node_modules/
+package-lock.json
+
+# Archivos de entorno y credenciales (Seguridad estricta)
+.env
+.env.*
+*.local
+*.pem
+*.key
+*.cert
+*.pfx
+
+# Registros y depuración
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos temporales del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Configuración local de IDEs y editores
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporales de compilación / cache
+.cache/
+tmp/
+temp/
