@@ -1,0 +1,12 @@
+{
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+  "editor.minimap.enabled": false,
+  "editor.formatOnSave": true,
+  "git.autofetch": false,
+  "search.followSymlinks": false,
+  "java.autobuild.enabled": false,
+  "java.server.launchMode": "LightWeight",
+  "java.trace.server": "off",
+  "redhat.telemetry.enabled": false
+}

@@ -170,6 +170,9 @@
     </div>
 
     <div class="comparator-toolbar">
+      <button type="button" class="nav-btn" id="btnVerQR" style="border-color: var(--primary); color: var(--primary);">
+        <span>📷</span> QR para Celular
+      </button>
       <button type="button" class="nav-btn primary" id="btnRecargarTodo">
         <span>🔄</span> Recargar Vistas
       </button>
@@ -228,11 +231,40 @@
 
   </main>
 
+  <!-- Modal Código QR para Móvil -->
+  <div class="modal-overlay" id="modalQR" role="dialog" aria-modal="true">
+    <div class="modal-card" style="text-align: center; max-width: 380px;">
+      <h2 style="font-size: 1.3rem; margin-bottom: 6px;">📱 Escanea con tu Celular</h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+        Asegúrate de tener <strong>Tailscale</strong> conectado en tu teléfono y apunta la cámara a este código:
+      </p>
+
+      <div style="background: #fff; padding: 16px; border-radius: 12px; display: inline-block; margin-bottom: 14px;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=http://100.70.78.107:3000" alt="QR Code Tailscale" style="display: block; width: 220px; height: 220px;">
+      </div>
+
+      <div style="background: var(--bg-input); padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: var(--primary); margin-bottom: 16px;">
+        http://100.70.78.107:3000
+      </div>
+
+      <button type="button" id="btnCerrarQR" class="btn-primary-large" style="padding: 10px 20px; font-size: 0.95rem;">
+        Cerrar
+      </button>
+    </div>
+  </div>
+
   <script>
     document.getElementById('btnRecargarTodo').addEventListener('click', () => {
       document.getElementById('frameClienteMovil').src = 'index.html?t=' + Date.now();
       document.getElementById('frameBarberoMovil').src = 'barbero.html?t=' + Date.now();
       document.getElementById('frameClienteDesktop').src = 'index.html?t=' + Date.now();
+    });
+
+    const modalQR = document.getElementById('modalQR');
+    document.getElementById('btnVerQR').addEventListener('click', () => modalQR.classList.add('active'));
+    document.getElementById('btnCerrarQR').addEventListener('click', () => modalQR.classList.remove('active'));
+    modalQR.addEventListener('click', (e) => {
+      if (e.target === modalQR) modalQR.classList.remove('active');
     });
   </script>
 </body>
