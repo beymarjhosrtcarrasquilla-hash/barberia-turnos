@@ -1,0 +1,14 @@
+{
+  "name": "barberia-turnos",
+  "version": "1.0.0",
+  "description": "Sistema de gestión y reserva de turnos para barbería moderna - PWA ligera",
+  "main": "dev-server.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node dev-server.mjs",
+    "dev": "node dev-server.mjs"
+  },
+  "keywords": ["barberia", "turnos", "pwa", "vanilla-js", "responsive"],
+  "author": "",
+  "license": "MIT"
+}

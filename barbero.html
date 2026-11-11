@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Barbero | Elite Barber Studio</title>
+  <meta name="theme-color" content="#0f1217">
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💈</text></svg>">
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+  <!-- Barra de Navegación Barbero -->
+  <header class="navbar">
+    <div class="container nav-content">
+      <div class="brand">
+        <div class="brand-icon" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;">💈</div>
+        <span>PORTAL BARBERO</span>
+      </div>
+      <nav class="nav-links">
+        <a href="index.html" class="nav-btn">
+          <span>←</span> Vista Clientes
+        </a>
+        <a href="comparador.html" class="nav-btn">
+          <span>📱</span> Comparador
+        </a>
+        <button type="button" id="btnLogout" class="nav-btn" style="color: var(--danger); border-color: var(--danger);">
+          Salir
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- PANTALLA DE ACCESO POR PIN (Bloqueada por defecto) -->
+  <section id="authSection" style="display: none; padding: 80px 20px;">
+    <div class="container" style="max-width: 420px; text-align: center;">
+      <div class="booking-panel" style="padding: 36px 28px;">
+        <div style="font-size: 3rem; margin-bottom: 12px;">🔒</div>
+        <h2 style="margin-bottom: 8px;">Acceso Privado Barbero</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+          Ingresa el PIN de seguridad para gestionar los turnos de la barbería.
+        </p>
+
+        <form id="pinForm">
+          <div class="form-group" style="text-align: left;">
+            <label for="pinInput" class="form-label">PIN de Acceso</label>
+            <input type="password" id="pinInput" class="form-input" placeholder="••••" maxlength="8" style="font-size: 1.5rem; text-align: center; letter-spacing: 0.3em;" required>
+          </div>
+
+          <button type="submit" class="btn-primary-large" style="margin-top: 10px;">
+            Ingresar al Panel
+          </button>
+
+          <button type="button" id="btnDemoPin" class="btn-secondary" style="width: 100%; margin-top: 12px; font-size: 0.85rem;">
+            ⚡ Usar PIN de Prueba (1234)
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTENIDO PRINCIPAL DEL PANEL BARBERO -->
+  <main id="adminContent" class="container" style="display: none; padding-top: 24px;">
+
+    <!-- Métricas del Día -->
+    <section class="metrics-bar">
+      <div class="metric-card">
+        <span class="metric-title">Turnos del Día</span>
+        <span class="metric-value" id="metTotalTurnos">0</span>
+        <span class="metric-sub">Agendados en total</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-title">Pendientes / Activos</span>
+        <span class="metric-value highlight" id="metPendientes">0</span>
+        <span class="metric-sub">Por atender hoy</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-title">Completados</span>
+        <span class="metric-value" id="metCompletados" style="color: var(--success);">0</span>
+        <span class="metric-sub">Clientes atendidos</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-title">Ingresos Proyectados</span>
+        <span class="metric-value highlight" id="metIngresos">$0.00</span>
+        <span class="metric-sub">Estimación del día</span>
+      </div>
+    </section>
+
+    <!-- Barra de Navegación por Fecha y Filtros -->
+    <section class="agenda-controls">
+      <div class="date-nav">
+        <button type="button" id="btnDiaAnterior" class="btn-icon" title="Día anterior">◀</button>
+        <button type="button" id="btnHoy" class="nav-btn" style="padding: 6px 12px; font-size: 0.85rem;">Hoy</button>
+        <button type="button" id="btnDiaSiguiente" class="btn-icon" title="Día siguiente">▶</button>
+        <input type="date" id="fechaFiltroInput" class="form-input" style="width: auto; padding: 6px 10px; font-size: 0.9rem;">
+      </div>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <select id="filtroEstadoSelect" class="form-select" style="width: auto; padding: 8px 12px;">
+          <option value="todos">Todos los estados</option>
+          <option value="activos">Solo activos / pendientes</option>
+          <option value="completados">Solo completados</option>
+          <option value="cancelados">Solo cancelados</option>
+        </select>
+
+        <button type="button" id="btnNuevoTurnoManual" class="nav-btn primary" style="font-weight: 600;">
+          <span>+</span> Nuevo Turno
+        </button>
+
+        <button type="button" id="btnResetDemo" class="nav-btn" title="Restablecer datos demo" style="font-size: 0.85rem; color: var(--text-dim);">
+          ↺ Reset Demo
+        </button>
+      </div>
+    </section>
+
+    <!-- Título Dinámico de la Fecha -->
+    <h2 id="fechaTitulo" style="margin-bottom: 16px; font-size: 1.3rem;">Agenda del Día</h2>
+
+    <!-- Lista de Turnos -->
+    <section class="turnos-list" id="turnosList">
+      <!-- Inyectado dinámicamente por barbero.js -->
+    </section>
+
+    <div id="turnosVacioMsg" style="display: none; text-align: center; padding: 48px 20px; background: var(--bg-card); border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 40px;">
+      <div style="font-size: 2.5rem; margin-bottom: 10px;">☕</div>
+      <h3>No hay turnos programados para este día</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 6px;">
+        Los nuevos turnos que los clientes reserven en la web pública aparecerán aquí automáticamente.
+      </p>
+    </div>
+
+  </main>
+
+  <!-- Modal para Agregar Turno Manual -->
+  <div class="modal-overlay" id="modalManual" role="dialog" aria-modal="true">
+    <div class="modal-card" style="text-align: left; max-width: 480px;">
+      <h2 style="font-size: 1.3rem; margin-bottom: 4px;">Registrar Turno Manual</h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+        Agrega rápidamente una reserva para clientes que llamaron por teléfono o llegaron al local.
+      </p>
+
+      <form id="formManual">
+        <div class="form-group">
+          <label for="manualCliente" class="form-label">Nombre del Cliente *</label>
+          <input type="text" id="manualCliente" class="form-input" placeholder="Nombre completo" required>
+        </div>
+
+        <div class="form-group">
+          <label for="manualTelefono" class="form-label">Teléfono *</label>
+          <input type="tel" id="manualTelefono" class="form-input" placeholder="+54 9 11 ..." required>
+        </div>
+
+        <div class="form-group">
+          <label for="manualServicioSelect" class="form-label">Servicio *</label>
+          <select id="manualServicioSelect" class="form-select" required></select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label for="manualFechaInput" class="form-label">Fecha *</label>
+            <input type="date" id="manualFechaInput" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="manualHoraInput" class="form-label">Hora *</label>
+            <input type="time" id="manualHoraInput" class="form-input" value="10:00" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="manualNotas" class="form-label">Notas adicionales</label>
+          <input type="text" id="manualNotas" class="form-input" placeholder="Ej: Pago adelantado, cliente VIP...">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="submit" class="btn-primary-large">
+            Guardar Turno
+          </button>
+          <button type="button" id="btnCerrarModalManual" class="btn-secondary" style="width: auto; padding: 0 16px;">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Pie de Página -->
+  <footer>
+    <div class="container">
+      <p>© 2026 Elite Barber Studio • Panel de Gestión de Turnos</p>
+    </div>
+  </footer>
+
+  <script type="module" src="js/barbero.js"></script>
+</body>
+</html>

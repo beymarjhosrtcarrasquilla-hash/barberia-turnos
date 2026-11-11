@@ -1,0 +1,387 @@
+import {
+  SERVICIOS,
+  obtenerReservas,
+  actualizarEstadoReserva,
+  cancelarReserva,
+  crearReserva,
+  restablecerDatosDemo,
+  formatearFechaISO,
+  verificarPinBarbero,
+  guardarSesionBarbero,
+  tieneSesionBarberoActiva
+} from './storage.js';
+
+// Estado del panel del barbero
+const estadoPanel = {
+  fechaActual: formatearFechaISO(new Date()),
+  filtroEstado: 'todos' // 'todos', 'activos', 'completados', 'cancelados'
+};
+
+// Elementos DOM de Autenticación
+const authSection = document.getElementById('authSection');
+const adminContent = document.getElementById('adminContent');
+const pinForm = document.getElementById('pinForm');
+const pinInput = document.getElementById('pinInput');
+const btnDemoPin = document.getElementById('btnDemoPin');
+const btnLogout = document.getElementById('btnLogout');
+
+// Elementos de la Agenda
+const fechaFiltroInput = document.getElementById('fechaFiltroInput');
+const fechaTitulo = document.getElementById('fechaTitulo');
+const btnDiaAnterior = document.getElementById('btnDiaAnterior');
+const btnDiaSiguiente = document.getElementById('btnDiaSiguiente');
+const btnHoy = document.getElementById('btnHoy');
+const turnosList = document.getElementById('turnosList');
+const turnosVacioMsg = document.getElementById('turnosVacioMsg');
+const filtroEstadoSelect = document.getElementById('filtroEstadoSelect');
+
+// Métricas
+const metTotalTurnos = document.getElementById('metTotalTurnos');
+const metIngresos = document.getElementById('metIngresos');
+const metPendientes = document.getElementById('metPendientes');
+const metCompletados = document.getElementById('metCompletados');
+
+// Modal Nuevo Turno Manual
+const btnNuevoTurnoManual = document.getElementById('btnNuevoTurnoManual');
+const modalManual = document.getElementById('modalManual');
+const formManual = document.getElementById('formManual');
+const btnCerrarModalManual = document.getElementById('btnCerrarModalManual');
+const manualServicioSelect = document.getElementById('manualServicioSelect');
+const manualFechaInput = document.getElementById('manualFechaInput');
+const manualHoraInput = document.getElementById('manualHoraInput');
+
+// Restablecer Demo
+const btnResetDemo = document.getElementById('btnResetDemo');
+
+/**
+ * Inicialización
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  verificarAutenticacion();
+  configurarEventosAuth();
+  configurarEventosAgenda();
+  poblarSelectServiciosManual();
+  registrarServiceWorker();
+});
+
+/**
+ * Control de acceso por PIN
+ */
+function verificarAutenticacion() {
+  if (tieneSesionBarberoActiva()) {
+    authSection.style.display = 'none';
+    adminContent.style.display = 'block';
+    cargarTurnos();
+  } else {
+    authSection.style.display = 'block';
+    adminContent.style.display = 'none';
+    pinInput.focus();
+  }
+}
+
+function configurarEventosAuth() {
+  pinForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (verificarPinBarbero(pinInput.value.trim())) {
+      guardarSesionBarbero(true);
+      verificarAutenticacion();
+      mostrarToast('Sesión iniciada correctamente.', 'success');
+    } else {
+      mostrarToast('PIN incorrecto. El PIN por defecto es 1234.', 'error');
+      pinInput.value = '';
+      pinInput.focus();
+    }
+  });
+
+  btnDemoPin.addEventListener('click', () => {
+    pinInput.value = '1234';
+    pinForm.dispatchEvent(new Event('submit'));
+  });
+
+  btnLogout.addEventListener('click', () => {
+    guardarSesionBarbero(false);
+    verificarAutenticacion();
+    mostrarToast('Sesión cerrada.', 'info');
+  });
+}
+
+/**
+ * Configuración de controles de la agenda
+ */
+function configurarEventosAgenda() {
+  fechaFiltroInput.value = estadoPanel.fechaActual;
+  actualizarTextoFechaTitulo();
+
+  fechaFiltroInput.addEventListener('change', (e) => {
+    estadoPanel.fechaActual = e.target.value;
+    actualizarTextoFechaTitulo();
+    cargarTurnos();
+  });
+
+  btnDiaAnterior.addEventListener('click', () => {
+    cambiarDia(-1);
+  });
+
+  btnDiaSiguiente.addEventListener('click', () => {
+    cambiarDia(1);
+  });
+
+  btnHoy.addEventListener('click', () => {
+    estadoPanel.fechaActual = formatearFechaISO(new Date());
+    fechaFiltroInput.value = estadoPanel.fechaActual;
+    actualizarTextoFechaTitulo();
+    cargarTurnos();
+  });
+
+  filtroEstadoSelect.addEventListener('change', (e) => {
+    estadoPanel.filtroEstado = e.target.value;
+    cargarTurnos();
+  });
+
+  // Modal Turno Manual
+  btnNuevoTurnoManual.addEventListener('click', () => {
+    manualFechaInput.value = estadoPanel.fechaActual;
+    modalManual.classList.add('active');
+  });
+
+  btnCerrarModalManual.addEventListener('click', () => {
+    modalManual.classList.remove('active');
+  });
+
+  formManual.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const cliente = document.getElementById('manualCliente').value.trim();
+    const telefono = document.getElementById('manualTelefono').value.trim();
+    const servicioId = manualServicioSelect.value;
+    const fecha = manualFechaInput.value;
+    const hora = manualHoraInput.value;
+    const notas = document.getElementById('manualNotas').value.trim();
+
+    try {
+      crearReserva({
+        cliente,
+        telefono,
+        servicioId,
+        fecha,
+        hora,
+        notas: notas ? `[Manual Barbero] ${notas}` : '[Agendado en local]'
+      });
+
+      mostrarToast(`Turno registrado para ${cliente} a las ${hora} hs.`, 'success');
+      formManual.reset();
+      modalManual.classList.remove('active');
+      cargarTurnos();
+    } catch (err) {
+      mostrarToast(err.message, 'error');
+    }
+  });
+
+  // Restablecer Demo
+  btnResetDemo.addEventListener('click', () => {
+    if (confirm('¿Deseas restablecer los turnos con los datos de demostración iniciales?')) {
+      restablecerDatosDemo();
+      cargarTurnos();
+      mostrarToast('Datos de demostración restablecidos.', 'info');
+    }
+  });
+}
+
+function cambiarDia(offset) {
+  const d = new Date(estadoPanel.fechaActual + 'T00:00:00');
+  d.setDate(d.getDate() + offset);
+  estadoPanel.fechaActual = formatearFechaISO(d);
+  fechaFiltroInput.value = estadoPanel.fechaActual;
+  actualizarTextoFechaTitulo();
+  cargarTurnos();
+}
+
+function actualizarTextoFechaTitulo() {
+  const [anio, mes, dia] = estadoPanel.fechaActual.split('-');
+  const hoyISO = formatearFechaISO(new Date());
+
+  let sufijo = '';
+  if (estadoPanel.fechaActual === hoyISO) sufijo = ' (Hoy)';
+
+  fechaTitulo.textContent = `Agenda del ${dia}/${mes}/${anio}${sufijo}`;
+}
+
+/**
+ * Carga y renderiza los turnos del día
+ */
+function cargarTurnos() {
+  const todas = obtenerReservas();
+  const reservasDia = todas.filter(r => r.fecha === estadoPanel.fechaActual);
+
+  // Calcular métricas del día (independiente de los filtros)
+  actualizarMetricas(reservasDia);
+
+  // Aplicar filtro de estado
+  let filtradas = reservasDia;
+  if (estadoPanel.filtroEstado === 'activos') {
+    filtradas = reservasDia.filter(r => r.estado === 'confirmado' || r.estado === 'pendiente');
+  } else if (estadoPanel.filtroEstado === 'completados') {
+    filtradas = reservasDia.filter(r => r.estado === 'completado');
+  } else if (estadoPanel.filtroEstado === 'cancelados') {
+    filtradas = reservasDia.filter(r => r.estado === 'cancelado');
+  }
+
+  // Ordenar cronológicamente
+  filtradas.sort((a, b) => a.hora.localeCompare(b.hora));
+
+  renderizarListaTurnos(filtradas);
+}
+
+/**
+ * Actualiza las tarjetas numéricas de resumen
+ */
+function actualizarMetricas(reservasDia) {
+  const total = reservasDia.length;
+  const completados = reservasDia.filter(r => r.estado === 'completado').length;
+  const cancelados = reservasDia.filter(r => r.estado === 'cancelado').length;
+  const pendientes = total - completados - cancelados;
+
+  const ingresosProyectados = reservasDia
+    .filter(r => r.estado !== 'cancelado')
+    .reduce((sum, r) => sum + (r.precio || 0), 0);
+
+  metTotalTurnos.textContent = total;
+  metPendientes.textContent = pendientes;
+  metCompletados.textContent = completados;
+  metIngresos.textContent = `$${ingresosProyectados.toFixed(2)}`;
+}
+
+/**
+ * Renderiza la lista visual de turnos
+ */
+function renderizarListaTurnos(turnos) {
+  turnosList.innerHTML = '';
+
+  if (turnos.length === 0) {
+    turnosVacioMsg.style.display = 'block';
+    return;
+  }
+
+  turnosVacioMsg.style.display = 'none';
+
+  turnos.forEach(t => {
+    const card = document.createElement('div');
+    card.className = `turno-card ${t.estado}`;
+
+    // Teléfono para WhatsApp
+    const telLimpio = (t.telefono || '').replace(/[^0-9]/g, '');
+    const msgWA = encodeURIComponent(`Hola ${t.cliente}! Te escribimos de Elite Barber Studio con respecto a tu turno de las ${t.hora} hs.`);
+    const waUrl = telLimpio ? `https://wa.me/${telLimpio}?text=${msgWA}` : '#';
+
+    card.innerHTML = `
+      <div class="turno-time">
+        <span>${t.hora} hs</span>
+        <span>${t.duracionMinutos || 45} min</span>
+      </div>
+
+      <div class="turno-client">
+        <strong>${t.cliente} ${t.esDemo ? '<span class="tag-badge demo">[DEMO]</span>' : ''}</strong>
+        <div class="turno-client-contact">
+          <span>📞 ${t.telefono}</span>
+          ${telLimpio ? `<a href="${waUrl}" target="_blank" rel="noopener" style="font-weight:600; color:#25d366;">💬 WhatsApp</a>` : ''}
+        </div>
+        ${t.notas ? `<p style="font-size: 0.82rem; color: var(--text-dim); margin-top: 4px;">📝 ${t.notas}</p>` : ''}
+      </div>
+
+      <div>
+        <div class="turno-service-name">${t.servicioNombre}</div>
+        <div class="turno-service-price">$${(t.precio || 0).toFixed(2)} • Código: ${t.codigo}</div>
+        <span class="tag-badge ${t.estado}">${t.estado}</span>
+      </div>
+
+      <div class="turno-actions">
+        ${t.estado !== 'completado' && t.estado !== 'cancelado' ? `
+          <button type="button" class="nav-btn" data-action="completar" data-id="${t.id}" title="Marcar como atendido" style="color: var(--success); border-color: var(--success);">
+            ✓ Completar
+          </button>
+        ` : ''}
+
+        ${t.estado !== 'cancelado' ? `
+          <button type="button" class="nav-btn" data-action="cancelar" data-id="${t.id}" title="Cancelar turno" style="color: var(--danger); border-color: var(--danger);">
+            ✕ Cancelar
+          </button>
+        ` : `
+          <button type="button" class="nav-btn" data-action="reactivar" data-id="${t.id}" title="Reactivar reserva">
+            ↺ Reactivar
+          </button>
+        `}
+      </div>
+    `;
+
+    // Eventos de botones de acción
+    const btnComp = card.querySelector('[data-action="completar"]');
+    if (btnComp) {
+      btnComp.addEventListener('click', () => {
+        actualizarEstadoReserva(t.id, 'completado');
+        mostrarToast(`Turno de ${t.cliente} marcado como completado.`, 'success');
+        cargarTurnos();
+      });
+    }
+
+    const btnCanc = card.querySelector('[data-action="cancelar"]');
+    if (btnCanc) {
+      btnCanc.addEventListener('click', () => {
+        if (confirm(`¿Cancelar el turno de las ${t.hora} de ${t.cliente}?`)) {
+          cancelarReserva(t.id);
+          mostrarToast(`Turno de ${t.cliente} cancelado.`, 'info');
+          cargarTurnos();
+        }
+      });
+    }
+
+    const btnReac = card.querySelector('[data-action="reactivar"]');
+    if (btnReac) {
+      btnReac.addEventListener('click', () => {
+        actualizarEstadoReserva(t.id, 'confirmado');
+        mostrarToast(`Turno de ${t.cliente} reactivado.`, 'success');
+        cargarTurnos();
+      });
+    }
+
+    turnosList.appendChild(card);
+  });
+}
+
+function poblarSelectServiciosManual() {
+  manualServicioSelect.innerHTML = '';
+  SERVICIOS.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.nombre} ($${s.precio.toFixed(2)})`;
+    manualServicioSelect.appendChild(opt);
+  });
+}
+
+function mostrarToast(mensaje, tipo = 'info') {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${tipo}`;
+  toast.innerHTML = `
+    <span>${tipo === 'success' ? '✅' : tipo === 'error' ? '⚠️' : 'ℹ️'}</span>
+    <span>${mensaje}</span>
+  `;
+
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.remove();
+  }, 3500);
+}
+
+function registrarServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.log('ServiceWorker barbero no disponible:', err);
+    });
+  }
+}
