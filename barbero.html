@@ -16,45 +16,41 @@
   <header class="navbar">
     <div class="container nav-content">
       <div class="brand">
-        <div class="brand-icon" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;">💈</div>
-        <span>PORTAL BARBERO</span>
+        <span class="brand-dot"></span>
+        <span>Portal Barbero</span>
       </div>
       <nav class="nav-links">
         <a href="index.html" class="nav-btn">
-          <span>←</span> Vista Clientes
+          Vista Clientes
         </a>
-        <a href="comparador.html" class="nav-btn">
-          <span>📱</span> Comparador
-        </a>
-        <button type="button" id="btnLogout" class="nav-btn" style="color: var(--danger); border-color: var(--danger);">
+        <button type="button" id="btnLogout" class="nav-btn" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.2);">
           Salir
         </button>
       </nav>
     </div>
   </header>
 
-  <!-- PANTALLA DE ACCESO POR PIN (Bloqueada por defecto) -->
-  <section id="authSection" style="display: none; padding: 80px 20px;">
-    <div class="container" style="max-width: 420px; text-align: center;">
-      <div class="booking-panel" style="padding: 36px 28px;">
-        <div style="font-size: 3rem; margin-bottom: 12px;">🔒</div>
-        <h2 style="margin-bottom: 8px;">Acceso Privado Barbero</h2>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
-          Ingresa el PIN de seguridad para gestionar los turnos de la barbería.
+  <!-- PANTALLA DE ACCESO POR PIN -->
+  <section id="authSection" style="display: none; padding: 60px 20px;">
+    <div class="container" style="max-width: 380px; text-align: center;">
+      <div class="booking-panel" style="padding: 28px 24px;">
+        <h2 style="font-size: 1.25rem; margin-bottom: 6px;">Acceso Privado</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
+          Ingresa el PIN para gestionar los turnos.
         </p>
 
         <form id="pinForm">
           <div class="form-group" style="text-align: left;">
-            <label for="pinInput" class="form-label">PIN de Acceso</label>
-            <input type="password" id="pinInput" class="form-input" placeholder="••••" maxlength="8" style="font-size: 1.5rem; text-align: center; letter-spacing: 0.3em;" required>
+            <label for="pinInput" class="form-label">PIN</label>
+            <input type="password" id="pinInput" class="form-input" placeholder="••••" maxlength="8" style="font-size: 1.3rem; text-align: center; letter-spacing: 0.3em;" required>
           </div>
 
           <button type="submit" class="btn-primary-large" style="margin-top: 10px;">
-            Ingresar al Panel
+            Ingresar
           </button>
 
-          <button type="button" id="btnDemoPin" class="btn-secondary" style="width: 100%; margin-top: 12px; font-size: 0.85rem;">
-            ⚡ Usar PIN de Prueba (1234)
+          <button type="button" id="btnDemoPin" class="btn-secondary" style="width: 100%; margin-top: 10px; font-size: 0.82rem;">
+            Usar PIN de prueba (1234)
           </button>
         </form>
       </div>

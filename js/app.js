@@ -67,10 +67,7 @@ function renderizarServicios() {
         <p class="service-desc">${servicio.descripcion}</p>
       </div>
       <div class="service-bottom">
-        <div class="service-duration">
-          <span>⏱️</span>
-          <span>${servicio.duracionMinutos} min</span>
-        </div>
+        <div class="service-duration">${servicio.duracionMinutos} min</div>
         <div class="service-price">$${servicio.precio.toFixed(2)}</div>
       </div>
     `;
@@ -363,10 +360,7 @@ function mostrarToast(mensaje, tipo = 'info') {
 
   const toast = document.createElement('div');
   toast.className = `toast ${tipo}`;
-  toast.innerHTML = `
-    <span>${tipo === 'success' ? '✅' : tipo === 'error' ? '⚠️' : 'ℹ️'}</span>
-    <span>${mensaje}</span>
-  `;
+  toast.innerHTML = `<span>${mensaje}</span>`;
 
   container.appendChild(toast);
   setTimeout(() => {
