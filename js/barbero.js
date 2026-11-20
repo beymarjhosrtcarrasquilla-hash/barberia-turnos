@@ -7,6 +7,10 @@ import {
   restablecerDatosDemo,
   formatearFechaISO,
   verificarPinBarbero,
+  pinConfigurado,
+  configurarPinBarbero,
+  segundosBloqueoRestantes,
+  escaparHTML,
   guardarSesionBarbero,
   tieneSesionBarberoActiva
 } from './storage.js';
@@ -24,7 +28,13 @@ const authSection = document.getElementById('authSection');
 const adminContent = document.getElementById('adminContent');
 const pinForm = document.getElementById('pinForm');
 const pinInput = document.getElementById('pinInput');
-const btnDemoPin = document.getElementById('btnDemoPin');
+const pinConfirmGroup = document.getElementById('pinConfirmGroup');
+const pinConfirmInput = document.getElementById('pinConfirmInput');
+const pinTitulo = document.getElementById('pinTitulo');
+const pinSubtitulo = document.getElementById('pinSubtitulo');
+const pinSubmitBtn = document.getElementById('pinSubmitBtn');
+const pinMensaje = document.getElementById('pinMensaje');
+let timerBloqueo = null;
 const btnLogout = document.getElementById('btnLogout');
 
 // Elementos de la Agenda
@@ -89,23 +99,68 @@ function verificarAutenticacion() {
   }
 }
 
-function configurarEventosAuth() {
-  pinForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (verificarPinBarbero(pinInput.value.trim())) {
-      guardarSesionBarbero(true);
-      verificarAutenticacion();
-      mostrarToast('Sesión iniciada correctamente.', 'success');
-    } else {
-      mostrarToast('PIN incorrecto. El PIN por defecto es 1234.', 'error');
-      pinInput.value = '';
-      pinInput.focus();
-    }
-  });
+function esc(v) { return escaparHTML(v); }
 
-  btnDemoPin.addEventListener('click', () => {
-    pinInput.value = '1234';
-    pinForm.dispatchEvent(new Event('submit'));
+function prepararModoPin() {
+  const configurado = pinConfigurado();
+  pinConfirmGroup.style.display = configurado ? 'none' : 'block';
+  pinConfirmInput.required = !configurado;
+  pinTitulo.textContent = configurado ? 'Acceso Privado' : 'Configurar PIN del barbero';
+  pinSubtitulo.textContent = configurado
+    ? 'Ingresa el PIN para gestionar los turnos.'
+    : 'Primer uso: define un PIN de 4 a 8 dígitos (no secuencias ni repetidos).';
+  pinSubmitBtn.textContent = configurado ? 'Ingresar' : 'Guardar PIN e ingresar';
+}
+
+function actualizarCuentaBloqueo() {
+  const seg = segundosBloqueoRestantes();
+  const bloqueado = seg > 0;
+  pinInput.disabled = bloqueado;
+  pinSubmitBtn.disabled = bloqueado;
+  if (bloqueado) {
+    const m = Math.floor(seg / 60);
+    pinMensaje.textContent = `Demasiados intentos. Reintenta en ${m}:${String(seg % 60).padStart(2, '0')} min.`;
+    clearTimeout(timerBloqueo);
+    timerBloqueo = setTimeout(actualizarCuentaBloqueo, 1000);
+  } else if (pinMensaje.dataset.bloqueo === '1' || pinMensaje.textContent.startsWith('Demasiados')) {
+    pinMensaje.textContent = '';
+  }
+  pinMensaje.dataset.bloqueo = bloqueado ? '1' : '0';
+}
+
+function configurarEventosAuth() {
+  prepararModoPin();
+  actualizarCuentaBloqueo();
+
+  pinForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pin = pinInput.value.trim();
+    try {
+      if (!pinConfigurado()) {
+        if (pin !== pinConfirmInput.value.trim()) {
+          mostrarToast('Los PIN no coinciden.', 'error');
+          return;
+        }
+        await configurarPinBarbero(pin);
+        prepararModoPin();
+      }
+      const r = await verificarPinBarbero(pin);
+      pinInput.value = '';
+      pinConfirmInput.value = '';
+      if (r.ok) {
+        guardarSesionBarbero(true);
+        verificarAutenticacion();
+        mostrarToast('Sesión iniciada correctamente.', 'success');
+      } else if (r.bloqueado) {
+        actualizarCuentaBloqueo();
+        mostrarToast('Acceso bloqueado temporalmente por intentos fallidos.', 'error');
+      } else {
+        mostrarToast(`PIN incorrecto. Intentos restantes: ${r.restantes}.`, 'error');
+        pinInput.focus();
+      }
+    } catch (err) {
+      mostrarToast(err.message, 'error');
+    }
   });
 
   btnLogout.addEventListener('click', () => {
@@ -290,50 +345,47 @@ function renderizarListaTurnos(turnos) {
 
   visibles.forEach(t => {
     const card = document.createElement('div');
-    card.className = `turno-card ${t.estado}`;
-
-    // Teléfono para WhatsApp
-    const telLimpio = (t.telefono || '').replace(/[^0-9]/g, '');
-    const msgWA = encodeURIComponent(`Hola ${t.cliente}, te escribimos de Elite Barber Studio por tu turno de las ${t.hora}.`);
-    const waUrl = telLimpio ? `https://wa.me/${telLimpio}?text=${msgWA}` : '#';
+    const estadoSeguro = ['pendiente', 'confirmado', 'completado', 'cancelado'].includes(t.estado) ? t.estado : 'pendiente';
+    const idSeguro = esc(t.id);
+    card.className = `turno-card ${estadoSeguro}`;
 
     card.innerHTML = `
       <div class="turno-time">
-        <span class="turno-hora">${t.hora}</span>
-        <span class="turno-duracion">${t.duracionMinutos || 45} min</span>
+        <span class="turno-hora">${esc(t.hora)}</span>
+        <span class="turno-duracion">${esc(Number(t.duracionMinutos) || 45)} min</span>
       </div>
 
       <div class="turno-client">
         <div class="turno-client-top">
-          <span class="turno-client-name">${t.cliente}</span>
-          <span class="tag-badge ${t.estado}">${t.estado}</span>
+          <span class="turno-client-name">${esc(t.cliente)}</span>
+          <span class="tag-badge ${estadoSeguro}">${esc(estadoSeguro)}</span>
           ${t.esDemo ? '<span class="tag-badge demo">Demo</span>' : ''}
         </div>
         <div class="turno-client-contact">
-          <span>${t.telefono}</span>
-          ${telLimpio ? `<a href="${waUrl}" target="_blank" rel="noopener" style="font-weight:600; color:#25d366;">WhatsApp</a>` : ''}
+          <span>${esc(t.telefono)}</span>
+          ${telLimpio ? `<a href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" style="font-weight:600; color:#25d366;">WhatsApp</a>` : ''}
         </div>
-        ${t.notas ? `<p class="turno-nota">${t.notas}</p>` : ''}
+        ${t.notas ? `<p class="turno-nota">${esc(t.notas)}</p>` : ''}
       </div>
 
       <div class="turno-service">
-        <div class="turno-service-name">${t.servicioNombre}</div>
-        <div class="turno-service-meta">$${(t.precio || 0).toFixed(2)}</div>
+        <div class="turno-service-name">${esc(t.servicioNombre)}</div>
+        <div class="turno-service-meta">$${esc((Number(t.precio) || 0).toFixed(2))}</div>
       </div>
 
       <div class="turno-actions">
-        ${t.estado !== 'completado' && t.estado !== 'cancelado' ? `
-          <button type="button" class="nav-btn" data-action="completar" data-id="${t.id}" title="Marcar como atendido" style="color: var(--success); border-color: var(--success);">
+        ${estadoSeguro !== 'completado' && estadoSeguro !== 'cancelado' ? `
+          <button type="button" class="nav-btn" data-action="completar" data-id="${idSeguro}" title="Marcar como atendido" style="color: var(--success); border-color: var(--success);">
             ✓ Listo
           </button>
         ` : ''}
 
-        ${t.estado !== 'cancelado' ? `
-          <button type="button" class="nav-btn" data-action="cancelar" data-id="${t.id}" title="Cancelar turno" style="color: var(--danger); border-color: var(--danger);">
+        ${estadoSeguro !== 'cancelado' ? `
+          <button type="button" class="nav-btn" data-action="cancelar" data-id="${idSeguro}" title="Cancelar turno" style="color: var(--danger); border-color: var(--danger);">
             ✕ Cancelar
           </button>
         ` : `
-          <button type="button" class="nav-btn" data-action="reactivar" data-id="${t.id}" title="Reactivar reserva">
+          <button type="button" class="nav-btn" data-action="reactivar" data-id="${idSeguro}" title="Reactivar reserva">
             ↺ Reactivar
           </button>
         `}
@@ -395,10 +447,11 @@ function mostrarToast(mensaje, tipo = 'info') {
 
   const toast = document.createElement('div');
   toast.className = `toast ${tipo}`;
-  toast.innerHTML = `
-    <span>${tipo === 'success' ? '✅' : tipo === 'error' ? '⚠️' : 'ℹ️'}</span>
-    <span>${mensaje}</span>
-  `;
+  const icono = document.createElement('span');
+  icono.textContent = tipo === 'success' ? '✅' : tipo === 'error' ? '⚠️' : 'ℹ️';
+  const texto = document.createElement('span');
+  texto.textContent = String(mensaje);
+  toast.append(icono, texto);
 
   container.appendChild(toast);
   setTimeout(() => {

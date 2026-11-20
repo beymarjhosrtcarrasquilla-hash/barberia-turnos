@@ -63,12 +63,12 @@ function renderizarServicios() {
 
     card.innerHTML = `
       <div class="service-top">
-        <h3 class="service-title">${servicio.nombre}</h3>
-        <p class="service-desc">${servicio.descripcion}</p>
+        <h3 class="service-title">${escaparHTML(servicio.nombre)}</h3>
+        <p class="service-desc">${escaparHTML(servicio.descripcion)}</p>
       </div>
       <div class="service-bottom">
-        <div class="service-duration">${servicio.duracionMinutos} min</div>
-        <div class="service-price">$${servicio.precio.toFixed(2)}</div>
+        <div class="service-duration">${escaparHTML(servicio.duracionMinutos)} min</div>
+        <div class="service-price">$${escaparHTML(servicio.precio.toFixed(2))}</div>
       </div>
     `;
 
@@ -360,7 +360,9 @@ function mostrarToast(mensaje, tipo = 'info') {
 
   const toast = document.createElement('div');
   toast.className = `toast ${tipo}`;
-  toast.innerHTML = `<span>${mensaje}</span>`;
+  const texto = document.createElement('span');
+  texto.textContent = String(mensaje);
+  toast.appendChild(texto);
 
   container.appendChild(toast);
   setTimeout(() => {

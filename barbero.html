@@ -34,23 +34,21 @@
   <section id="authSection" style="display: none; padding: 60px 20px;">
     <div class="container" style="max-width: 380px; text-align: center;">
       <div class="booking-panel" style="padding: 28px 24px;">
-        <h2 style="font-size: 1.25rem; margin-bottom: 6px;">Acceso Privado</h2>
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
+        <h2 id="pinTitulo" style="font-size: 1.25rem; margin-bottom: 6px;">Acceso Privado</h2>
+        <p id="pinSubtitulo" style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
           Ingresa el PIN para gestionar los turnos.
         </p>
 
         <form id="pinForm">
           <div class="form-group" style="text-align: left;">
             <label for="pinInput" class="form-label">PIN</label>
-            <input type="password" id="pinInput" class="form-input" placeholder="••••" maxlength="8" style="font-size: 1.3rem; text-align: center; letter-spacing: 0.3em;" required>
+            <input type="password" id="pinInput" class="form-input" inputmode="numeric" pattern="[0-9]{4,8}" autocomplete="current-password" placeholder="••••" maxlength="8" style="font-size: 1.3rem; text-align: center; letter-spacing: 0.3em;" required>
           </div>
 
-          <button type="submit" class="btn-primary-large" style="margin-top: 10px;">
+          <div class="form-group" id="pinConfirmGroup" style="text-align: left; display: none;"><label for="pinConfirmInput" class="form-label">Confirmar PIN</label><input type="password" id="pinConfirmInput" class="form-input" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" autocomplete="new-password" style="font-size: 1.3rem; text-align: center; letter-spacing: 0.3em;"></div>
+          <p id="pinMensaje" role="alert" style="color: var(--danger); font-size: 0.82rem; min-height: 1em;"></p>
+          <button type="submit" id="pinSubmitBtn" class="btn-primary-large" style="margin-top: 10px;">
             Ingresar
-          </button>
-
-          <button type="button" id="btnDemoPin" class="btn-secondary" style="width: 100%; margin-top: 10px; font-size: 0.82rem;">
-            Usar PIN de prueba (1234)
           </button>
         </form>
       </div>

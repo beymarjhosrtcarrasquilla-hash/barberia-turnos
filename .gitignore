@@ -5,6 +5,7 @@ package-lock.json
 # Archivos de entorno y credenciales (Seguridad estricta)
 .env
 .env.*
+!.env.example
 *.local
 *.pem
 *.key
