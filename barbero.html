@@ -63,24 +63,20 @@
     <!-- Métricas del Día -->
     <section class="metrics-bar">
       <div class="metric-card">
-        <span class="metric-title">Turnos del Día</span>
+        <span class="metric-title">Turnos Hoy</span>
         <span class="metric-value" id="metTotalTurnos">0</span>
-        <span class="metric-sub">Agendados en total</span>
       </div>
       <div class="metric-card">
-        <span class="metric-title">Pendientes / Activos</span>
+        <span class="metric-title">Pendientes</span>
         <span class="metric-value highlight" id="metPendientes">0</span>
-        <span class="metric-sub">Por atender hoy</span>
       </div>
       <div class="metric-card">
         <span class="metric-title">Completados</span>
         <span class="metric-value" id="metCompletados" style="color: var(--success);">0</span>
-        <span class="metric-sub">Clientes atendidos</span>
       </div>
       <div class="metric-card">
-        <span class="metric-title">Ingresos Proyectados</span>
+        <span class="metric-title">Ingresos</span>
         <span class="metric-value highlight" id="metIngresos">$0.00</span>
-        <span class="metric-sub">Estimación del día</span>
       </div>
     </section>
 
@@ -119,11 +115,16 @@
       <!-- Inyectado dinámicamente por barbero.js -->
     </section>
 
-    <div id="turnosVacioMsg" style="display: none; text-align: center; padding: 48px 20px; background: var(--bg-card); border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 40px;">
-      <div style="font-size: 2.5rem; margin-bottom: 10px;">☕</div>
-      <h3>No hay turnos programados para este día</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 6px;">
-        Los nuevos turnos que los clientes reserven en la web pública aparecerán aquí automáticamente.
+    <div id="turnosToggleWrap" class="turnos-toggle-wrap" style="display: none;">
+      <button type="button" id="btnToggleTurnos" class="btn-secondary" style="width: auto; padding: 8px 18px; font-size: 0.85rem;">
+        Ver todas
+      </button>
+    </div>
+
+    <div id="turnosVacioMsg" style="display: none; text-align: center; padding: 36px 20px; background: var(--bg-card); border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 32px;">
+      <h3 style="font-size: 1.05rem;">Sin turnos para esta fecha</h3>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 6px;">
+        Las reservas de tus clientes aparecerán aquí.
       </p>
     </div>
 

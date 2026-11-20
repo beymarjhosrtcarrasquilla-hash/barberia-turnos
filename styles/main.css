@@ -588,3 +588,251 @@ footer {
   font-size: 0.8rem;
   margin-top: 40px;
 }
+
+/* ==========================================================================
+   PORTAL BARBERO - TARJETAS, MÉTRICAS Y AGENDA LIMPIA
+   ========================================================================== */
+.metrics-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .metrics-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-title {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.metric-value.highlight {
+  color: var(--primary);
+}
+
+.agenda-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 18px;
+}
+
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-icon {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.btn-icon:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.turnos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.turno-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 92px 1.4fr 1.2fr auto;
+  align-items: center;
+  gap: 14px;
+  transition: var(--transition);
+}
+
+.turno-card:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.turno-card.completado {
+  border-left-color: var(--success);
+}
+
+.turno-card.cancelado {
+  border-left-color: var(--danger);
+  opacity: 0.65;
+}
+
+@media (max-width: 820px) {
+  .turno-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.turno-time {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.turno-hora {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.turno-duracion {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.turno-client {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.turno-client-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.turno-client-name {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.turno-client-contact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.turno-nota {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.turno-service {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.turno-service-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.turno-service-meta {
+  font-size: 0.8rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.turno-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 820px) {
+  .turno-actions {
+    justify-content: flex-start;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+.tag-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: capitalize;
+  border: 1px solid var(--border-color);
+}
+
+.tag-badge.confirmado,
+.tag-badge.pendiente {
+  color: var(--primary);
+  background: var(--primary-light);
+  border-color: rgba(197, 160, 89, 0.25);
+}
+
+.tag-badge.completado {
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.tag-badge.cancelado {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.tag-badge.demo {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.turnos-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}

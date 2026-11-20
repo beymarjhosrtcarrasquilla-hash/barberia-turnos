@@ -12,9 +12,11 @@ import {
 } from './storage.js';
 
 // Estado del panel del barbero
+const LIMITE_RECIENTES = 4;
 const estadoPanel = {
   fechaActual: formatearFechaISO(new Date()),
-  filtroEstado: 'todos' // 'todos', 'activos', 'completados', 'cancelados'
+  filtroEstado: 'todos', // 'todos', 'activos', 'completados', 'cancelados'
+  mostrarTodas: false
 };
 
 // Elementos DOM de Autenticación
@@ -32,6 +34,8 @@ const btnDiaAnterior = document.getElementById('btnDiaAnterior');
 const btnDiaSiguiente = document.getElementById('btnDiaSiguiente');
 const btnHoy = document.getElementById('btnHoy');
 const turnosList = document.getElementById('turnosList');
+const turnosToggleWrap = document.getElementById('turnosToggleWrap');
+const btnToggleTurnos = document.getElementById('btnToggleTurnos');
 const turnosVacioMsg = document.getElementById('turnosVacioMsg');
 const filtroEstadoSelect = document.getElementById('filtroEstadoSelect');
 
@@ -61,6 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
   configurarEventosAuth();
   configurarEventosAgenda();
   poblarSelectServiciosManual();
+  if (btnToggleTurnos) {
+    btnToggleTurnos.addEventListener('click', () => {
+      estadoPanel.mostrarTodas = !estadoPanel.mostrarTodas;
+      cargarTurnos();
+    });
+  }
   registrarServiceWorker();
 });
 
@@ -258,45 +268,63 @@ function renderizarListaTurnos(turnos) {
 
   if (turnos.length === 0) {
     turnosVacioMsg.style.display = 'block';
+    if (turnosToggleWrap) turnosToggleWrap.style.display = 'none';
     return;
   }
 
   turnosVacioMsg.style.display = 'none';
 
-  turnos.forEach(t => {
+  const hayMas = turnos.length > LIMITE_RECIENTES;
+  const visibles = (hayMas && !estadoPanel.mostrarTodas) ? turnos.slice(0, LIMITE_RECIENTES) : turnos;
+
+  if (turnosToggleWrap && btnToggleTurnos) {
+    if (hayMas) {
+      turnosToggleWrap.style.display = 'flex';
+      btnToggleTurnos.textContent = estadoPanel.mostrarTodas
+        ? `Mostrar recientes (${LIMITE_RECIENTES})`
+        : `Ver todas (${turnos.length})`;
+    } else {
+      turnosToggleWrap.style.display = 'none';
+    }
+  }
+
+  visibles.forEach(t => {
     const card = document.createElement('div');
     card.className = `turno-card ${t.estado}`;
 
     // Teléfono para WhatsApp
     const telLimpio = (t.telefono || '').replace(/[^0-9]/g, '');
-    const msgWA = encodeURIComponent(`Hola ${t.cliente}! Te escribimos de Elite Barber Studio con respecto a tu turno de las ${t.hora} hs.`);
+    const msgWA = encodeURIComponent(`Hola ${t.cliente}, te escribimos de Elite Barber Studio por tu turno de las ${t.hora}.`);
     const waUrl = telLimpio ? `https://wa.me/${telLimpio}?text=${msgWA}` : '#';
 
     card.innerHTML = `
       <div class="turno-time">
-        <span>${t.hora} hs</span>
-        <span>${t.duracionMinutos || 45} min</span>
+        <span class="turno-hora">${t.hora}</span>
+        <span class="turno-duracion">${t.duracionMinutos || 45} min</span>
       </div>
 
       <div class="turno-client">
-        <strong>${t.cliente} ${t.esDemo ? '<span class="tag-badge demo">[DEMO]</span>' : ''}</strong>
-        <div class="turno-client-contact">
-          <span>📞 ${t.telefono}</span>
-          ${telLimpio ? `<a href="${waUrl}" target="_blank" rel="noopener" style="font-weight:600; color:#25d366;">💬 WhatsApp</a>` : ''}
+        <div class="turno-client-top">
+          <span class="turno-client-name">${t.cliente}</span>
+          <span class="tag-badge ${t.estado}">${t.estado}</span>
+          ${t.esDemo ? '<span class="tag-badge demo">Demo</span>' : ''}
         </div>
-        ${t.notas ? `<p style="font-size: 0.82rem; color: var(--text-dim); margin-top: 4px;">📝 ${t.notas}</p>` : ''}
+        <div class="turno-client-contact">
+          <span>${t.telefono}</span>
+          ${telLimpio ? `<a href="${waUrl}" target="_blank" rel="noopener" style="font-weight:600; color:#25d366;">WhatsApp</a>` : ''}
+        </div>
+        ${t.notas ? `<p class="turno-nota">${t.notas}</p>` : ''}
       </div>
 
-      <div>
+      <div class="turno-service">
         <div class="turno-service-name">${t.servicioNombre}</div>
-        <div class="turno-service-price">$${(t.precio || 0).toFixed(2)} • Código: ${t.codigo}</div>
-        <span class="tag-badge ${t.estado}">${t.estado}</span>
+        <div class="turno-service-meta">$${(t.precio || 0).toFixed(2)}</div>
       </div>
 
       <div class="turno-actions">
         ${t.estado !== 'completado' && t.estado !== 'cancelado' ? `
           <button type="button" class="nav-btn" data-action="completar" data-id="${t.id}" title="Marcar como atendido" style="color: var(--success); border-color: var(--success);">
-            ✓ Completar
+            ✓ Listo
           </button>
         ` : ''}
 
