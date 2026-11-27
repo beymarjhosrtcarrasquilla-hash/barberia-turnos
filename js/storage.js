@@ -10,7 +10,8 @@ const STORAGE_KEYS = {
   SESION_BARBERO: 'barberia_sesion_barbero',
   PIN: 'barberia_pin_v1',
   INTENTOS: 'barberia_pin_intentos_v1',
-  BLOQUEOS: 'barberia_bloqueos_v1'
+  BLOQUEOS: 'barberia_bloqueos_v1',
+  DIAS_CERRADOS: 'barberia_dias_cerrados_v1'
 };
 
 // Configuración centralizada del negocio (Fran Barbe - Cali, Colombia)
@@ -24,24 +25,29 @@ export const NEGOCIO_CONFIG = Object.freeze({
   moneda: 'COP',
   servicios: [
     {
-      id: 'basico',
+      id: 'corte-basico',
       nombre: 'Corte Básico',
       duracionMinutos: 30,
       precio: 20000,
-      descripcion: 'Corte clásico o degradado a máquina y tijera, perfilado de contornos y acabado limpio.'
+      descripcion: 'Corte de cabello clásico o moderno, perfilado de patillas y acabado limpio.'
     },
     {
-      id: 'completo',
-      nombre: 'Corte Completo (Corte + Barba)',
+      id: 'corte-completo',
+      nombre: 'Corte Completo',
       duracionMinutos: 45,
       precio: 30000,
-      descripcion: 'Corte de cabello completo, arreglo y perfilado de barba con detalle adicional.'
+      descripcion: 'Corte completo + arreglo y perfilado de barba con terminación detallada.'
     }
   ]
 });
 
 // Servicios oficiales ofrecidos (únicamente 2)
 export const SERVICIOS = NEGOCIO_CONFIG.servicios;
+
+// La agenda inicia limpia en producción, sin turnos ficticios de demostración
+export function generarDatosDemo() {
+  return [];
+}
 
 // Formato de pesos colombianos sin decimales: 20000 -> $20.000
 export function formatearCOP(valor) {
@@ -179,6 +185,40 @@ export function alternarBloqueoHora(fecha, hora) {
   if (bloqueos[fecha].length === 0) delete bloqueos[fecha];
   localStorage.setItem(STORAGE_KEYS.BLOQUEOS, JSON.stringify(bloqueos));
   return bloqueada;
+}
+
+/* ==========================================================================
+ * CIERRE DE DÍA COMPLETO (barbero): marca/desmarca una fecha como no laborable
+ * ========================================================================== */
+export function obtenerDiasCerrados() {
+  try {
+    const lista = JSON.parse(localStorage.getItem(STORAGE_KEYS.DIAS_CERRADOS) || '[]');
+    return Array.isArray(lista) ? lista.filter((f) => RE_FECHA.test(f)) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+export function estaDiaCerrado(fecha) {
+  return obtenerDiasCerrados().includes(String(fecha));
+}
+
+// Marca/desmarca un día completo como cerrado. Devuelve true si queda cerrado.
+export function alternarDiaCerrado(fecha) {
+  const f = String(fecha ?? '');
+  if (!RE_FECHA.test(f)) throw new Error('Fecha inválida.');
+  const actuales = obtenerDiasCerrados();
+  let cerrado;
+  let siguientes;
+  if (actuales.includes(f)) {
+    siguientes = actuales.filter((d) => d !== f);
+    cerrado = false;
+  } else {
+    siguientes = [...actuales, f].sort();
+    cerrado = true;
+  }
+  localStorage.setItem(STORAGE_KEYS.DIAS_CERRADOS, JSON.stringify(siguientes));
+  return cerrado;
 }
 
 /**
@@ -421,6 +461,7 @@ export function validarReserva(datos) {
   const d = new Date(fecha + 'T00:00:00');
   if (Number.isNaN(d.getTime()) || formatearFechaISO(d) !== fecha) throw new Error('Fecha inexistente.');
   if (!HORARIOS_CONFIG.diasLaborables.includes(d.getDay())) throw new Error('La barbería está cerrada ese día.');
+  if (estaDiaCerrado(fecha)) throw new Error('La barbería no atiende en la fecha seleccionada (día cerrado).');
   if (!generarSlotsDisponibles().includes(hora)) throw new Error('Horario fuera del horario de atención.');
   const hoyISO = formatearFechaISO(new Date());
   const max = new Date();

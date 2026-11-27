@@ -4,6 +4,7 @@ import {
   generarSlotsDisponibles,
   obtenerHorasOcupadasPorFecha,
   obtenerHorasBloqueadas,
+  estaDiaCerrado,
   crearReserva,
   consultarReservaCliente,
   cancelarReservaCliente,
@@ -224,7 +225,16 @@ function renderizarSlotsHorarios() {
   }
 
   slotsVacioMsg.style.display = 'none';
+  slotsVacioMsg.textContent = 'No hay turnos disponibles para esta fecha.';
   slotsContainer.innerHTML = '';
+
+  if (estaDiaCerrado(fecha)) {
+    slotsVacioMsg.textContent = 'La barbería no atiende en esta fecha (día cerrado).';
+    slotsVacioMsg.style.display = 'block';
+    estadoReserva.horaSeleccionada = null;
+    actualizarResumen();
+    return;
+  }
 
   const todosLosSlots = generarSlotsDisponibles();
   const horasOcupadas = obtenerHorasOcupadasPorFecha(fecha);

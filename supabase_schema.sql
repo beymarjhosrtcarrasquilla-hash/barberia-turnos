@@ -38,6 +38,13 @@ create table if not exists public.bloqueos_horario (
   unique (fecha, hora)
 );
 
+-- Días cerrados completos por el barbero
+create table if not exists public.dias_cerrados (
+  fecha date primary key,
+  motivo text check (motivo is null or char_length(motivo) <= 100),
+  creado_en timestamptz not null default now()
+);
+
 -- Un solo turno activo por fecha/hora (evita doble reserva)
 create unique index if not exists reservas_slot_unico
   on public.reservas (fecha, hora) where estado <> 'cancelado';
@@ -45,16 +52,22 @@ create unique index if not exists reservas_slot_unico
 alter table public.servicios enable row level security;
 alter table public.reservas enable row level security;
 alter table public.bloqueos_horario enable row level security;
+alter table public.dias_cerrados enable row level security;
 alter table public.servicios force row level security;
 alter table public.reservas force row level security;
 alter table public.bloqueos_horario force row level security;
+alter table public.dias_cerrados force row level security;
 
 revoke all on public.reservas from anon, authenticated;
 revoke all on public.servicios from anon, authenticated;
 revoke all on public.bloqueos_horario from anon, authenticated;
+revoke all on public.dias_cerrados from anon, authenticated;
 grant select on public.servicios to anon, authenticated;
+grant select on public.bloqueos_horario to anon, authenticated;
+grant select on public.dias_cerrados to anon, authenticated;
 grant select, insert, update, delete on public.reservas to authenticated;
-grant select, insert, update, delete on public.bloqueos_horario to authenticated;
+grant insert, update, delete on public.bloqueos_horario to authenticated;
+grant insert, update, delete on public.dias_cerrados to authenticated;
 
 -- Servicios: lectura publica de los activos
 drop policy if exists servicios_lectura_publica on public.servicios;
@@ -69,9 +82,23 @@ create policy reservas_barbero_todo on public.reservas
   using ((auth.jwt() -> 'app_metadata' ->> 'role') = 'barbero')
   with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'barbero');
 
--- Bloqueos: SOLO el barbero autenticado (anon no tiene grant ni policy; lee via horas_ocupadas())
+-- Bloqueos: lectura pública, escritura solo rol barbero
 drop policy if exists bloqueos_barbero_todo on public.bloqueos_horario;
-create policy bloqueos_barbero_todo on public.bloqueos_horario
+drop policy if exists bloqueos_lectura_publica on public.bloqueos_horario;
+create policy bloqueos_lectura_publica on public.bloqueos_horario
+  for select to anon, authenticated using (true);
+drop policy if exists bloqueos_barbero_escritura on public.bloqueos_horario;
+create policy bloqueos_barbero_escritura on public.bloqueos_horario
+  for all to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') = 'barbero')
+  with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'barbero');
+
+-- Días cerrados: lectura pública, escritura solo rol barbero
+drop policy if exists dias_cerrados_lectura_publica on public.dias_cerrados;
+create policy dias_cerrados_lectura_publica on public.dias_cerrados
+  for select to anon, authenticated using (true);
+drop policy if exists dias_cerrados_barbero_escritura on public.dias_cerrados;
+create policy dias_cerrados_barbero_escritura on public.dias_cerrados
   for all to authenticated
   using ((auth.jwt() -> 'app_metadata' ->> 'role') = 'barbero')
   with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'barbero');
@@ -96,6 +123,9 @@ begin
   end if;
   if not exists (select 1 from public.servicios where id = p_servicio_id and activo) then
     raise exception 'servicio invalido';
+  end if;
+  if exists (select 1 from public.dias_cerrados where fecha = p_fecha) then
+    raise exception 'dia cerrado por el barbero';
   end if;
   if exists (select 1 from public.bloqueos_horario where fecha = p_fecha and hora = p_hora) then
     raise exception 'horario no disponible';
@@ -165,8 +195,12 @@ grant execute on function public.consultar_reserva_cliente(text,text) to anon, a
 grant execute on function public.cancelar_reserva_cliente(text,text) to anon, authenticated;
 
 insert into public.servicios (id, nombre, duracion_minutos, precio) values
-  ('basico','Corte Básico',30,20000),
-  ('completo','Corte Completo (Corte + Barba)',45,30000)
-on conflict (id) do nothing;
+  ('corte-basico','Corte Básico',30,20000),
+  ('corte-completo','Corte Completo',45,30000)
+on conflict (id) do update set
+  nombre = excluded.nombre,
+  duracion_minutos = excluded.duracion_minutos,
+  precio = excluded.precio,
+  activo = true;
 -- Si existian servicios de la demo anterior, desactivarlos (sin borrar historial):
-update public.servicios set activo = false where id not in ('basico','completo');
+update public.servicios set activo = false where id not in ('corte-basico','corte-completo');

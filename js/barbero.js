@@ -9,6 +9,8 @@ import {
   generarSlotsDisponibles,
   obtenerHorasBloqueadas,
   alternarBloqueoHora,
+  estaDiaCerrado,
+  alternarDiaCerrado,
   verificarPinBarbero,
   pinConfigurado,
   configurarPinBarbero,
@@ -69,6 +71,8 @@ const manualHoraInput = document.getElementById('manualHoraInput');
 
 // Bloqueo rápido de horarios
 const bloqueoGrid = document.getElementById('bloqueoGrid');
+const btnCerrarDia = document.getElementById('btnCerrarDia');
+const bloqueoSubtitulo = document.getElementById('bloqueoSubtitulo');
 
 /**
  * Inicialización
@@ -205,6 +209,21 @@ function configurarEventosAgenda() {
     estadoPanel.filtroEstado = e.target.value;
     cargarTurnos();
   });
+
+  if (btnCerrarDia) {
+    btnCerrarDia.addEventListener('click', () => {
+      try {
+        const cerrado = alternarDiaCerrado(estadoPanel.fechaActual);
+        mostrarToast(
+          cerrado ? `Día ${estadoPanel.fechaActual} cerrado para nuevas citas.` : `Día ${estadoPanel.fechaActual} reabierto.`,
+          'info'
+        );
+        renderizarBloqueos();
+      } catch (err) {
+        mostrarToast(err.message, 'error');
+      }
+    });
+  }
 
   // Modal Turno Manual
   btnNuevoTurnoManual.addEventListener('click', () => {
@@ -429,6 +448,21 @@ function renderizarListaTurnos(turnos) {
 function renderizarBloqueos(todasLasReservas) {
   if (!bloqueoGrid) return;
   const fecha = estadoPanel.fechaActual;
+  const diaCerrado = estaDiaCerrado(fecha);
+
+  if (btnCerrarDia) {
+    btnCerrarDia.textContent = diaCerrado ? 'Reabrir día' : 'Cerrar día completo';
+    btnCerrarDia.style.color = diaCerrado ? 'var(--success)' : 'var(--danger)';
+    btnCerrarDia.style.borderColor = diaCerrado ? 'var(--success)' : 'rgba(239, 68, 68, 0.35)';
+  }
+  if (bloqueoSubtitulo) {
+    bloqueoSubtitulo.innerHTML = diaCerrado
+      ? 'Este día está marcado como <strong>Cerrado</strong>. Los clientes no verán horarios disponibles hasta que lo reabras.'
+      : 'Toca una hora para marcarla como <strong>No disponible</strong> (almuerzo, diligencia). Los clientes no la verán. Vuelve a tocarla para liberarla. Las horas con turno activo no se pueden bloquear.';
+  }
+  bloqueoGrid.style.opacity = diaCerrado ? '0.45' : '1';
+  bloqueoGrid.style.pointerEvents = diaCerrado ? 'none' : 'auto';
+
   const ocupadas = new Set(
     (todasLasReservas || obtenerReservas())
       .filter(r => r.fecha === fecha && r.estado !== 'cancelado')

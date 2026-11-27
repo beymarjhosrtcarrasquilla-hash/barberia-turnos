@@ -104,8 +104,13 @@
 
     <!-- Bloqueo rápido de horarios -->
     <section class="booking-panel" id="seccionBloqueo" style="margin-bottom: 20px; padding: 16px;">
-      <h3 style="font-size: 1.05rem; margin-bottom: 4px;">Bloqueo rápido de horarios</h3>
-      <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px;">
+        <h3 style="font-size: 1.05rem; margin: 0;">Bloqueo rápido de horarios</h3>
+        <button type="button" id="btnCerrarDia" class="nav-btn" style="font-size: 0.82rem; padding: 6px 12px;">
+          Cerrar día completo
+        </button>
+      </div>
+      <p id="bloqueoSubtitulo" style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 10px;">
         Toca una hora para marcarla como <strong>No disponible</strong> (almuerzo, diligencia). Los clientes no la verán. Vuelve a tocarla para liberarla. Las horas con turno activo no se pueden bloquear.
       </p>
       <div id="bloqueoGrid" class="slots-container"></div>
