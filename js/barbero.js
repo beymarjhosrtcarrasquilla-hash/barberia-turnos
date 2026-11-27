@@ -1,23 +1,24 @@
 import {
   SERVICIOS,
-  obtenerReservas,
-  actualizarEstadoReserva,
-  cancelarReserva,
-  crearReserva,
+  esModoSupabase,
+  cargarDisponibilidadFecha,
+  obtenerReservasBarberoAsync,
+  crearReservaManualBarberoAsync,
+  actualizarEstadoReservaAsync,
+  alternarBloqueoHoraAsync,
+  alternarDiaCerradoAsync,
+  tieneSesionBarberoSupabase,
+  iniciarSesionBarberoSupabase,
+  cerrarSesionBarberoSupabase,
   formatearFechaISO,
   formatearCOP,
   generarSlotsDisponibles,
-  obtenerHorasBloqueadas,
-  alternarBloqueoHora,
-  estaDiaCerrado,
-  alternarDiaCerrado,
   verificarPinBarbero,
   pinConfigurado,
   configurarPinBarbero,
   segundosBloqueoRestantes,
   escaparHTML,
-  guardarSesionBarbero,
-  tieneSesionBarberoActiva
+  guardarSesionBarbero
 } from './storage.js';
 
 // Estado del panel del barbero
@@ -31,6 +32,11 @@ const estadoPanel = {
 // Elementos DOM de Autenticación
 const authSection = document.getElementById('authSection');
 const adminContent = document.getElementById('adminContent');
+const supabaseAuthForm = document.getElementById('supabaseAuthForm');
+const barberoEmail = document.getElementById('barberoEmail');
+const barberoPassword = document.getElementById('barberoPassword');
+const authMensaje = document.getElementById('authMensaje');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
 const pinForm = document.getElementById('pinForm');
 const pinInput = document.getElementById('pinInput');
 const pinConfirmGroup = document.getElementById('pinConfirmGroup');
@@ -95,14 +101,22 @@ document.addEventListener('DOMContentLoaded', () => {
  * Control de acceso por PIN
  */
 function verificarAutenticacion() {
-  if (tieneSesionBarberoActiva()) {
+  if (tieneSesionBarberoSupabase()) {
     authSection.style.display = 'none';
     adminContent.style.display = 'block';
     cargarTurnos();
   } else {
     authSection.style.display = 'block';
     adminContent.style.display = 'none';
-    pinInput.focus();
+    if (esModoSupabase()) {
+      if (supabaseAuthForm) supabaseAuthForm.style.display = 'block';
+      if (pinForm) pinForm.style.display = 'none';
+      if (barberoEmail) barberoEmail.focus();
+    } else {
+      if (supabaseAuthForm) supabaseAuthForm.style.display = 'none';
+      if (pinForm) pinForm.style.display = 'block';
+      pinInput.focus();
+    }
   }
 }
 
@@ -136,42 +150,65 @@ function actualizarCuentaBloqueo() {
 }
 
 function configurarEventosAuth() {
-  prepararModoPin();
-  actualizarCuentaBloqueo();
-
-  pinForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const pin = pinInput.value.trim();
-    try {
-      if (!pinConfigurado()) {
-        if (pin !== pinConfirmInput.value.trim()) {
-          mostrarToast('Los PIN no coinciden.', 'error');
-          return;
+  if (esModoSupabase()) {
+    pinTitulo.textContent = 'Portal Barbero';
+    pinSubtitulo.textContent = 'Inicia sesión con tu correo y contraseña de Supabase.';
+    if (supabaseAuthForm) {
+      supabaseAuthForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (authMensaje) authMensaje.textContent = '';
+        if (authSubmitBtn) authSubmitBtn.disabled = true;
+        try {
+          await iniciarSesionBarberoSupabase(barberoEmail.value, barberoPassword.value);
+          barberoPassword.value = '';
+          verificarAutenticacion();
+          mostrarToast('Sesión iniciada en Supabase.', 'success');
+        } catch (err) {
+          if (authMensaje) authMensaje.textContent = err.message;
+          mostrarToast(err.message, 'error');
+        } finally {
+          if (authSubmitBtn) authSubmitBtn.disabled = false;
         }
-        await configurarPinBarbero(pin);
-        prepararModoPin();
-      }
-      const r = await verificarPinBarbero(pin);
-      pinInput.value = '';
-      pinConfirmInput.value = '';
-      if (r.ok) {
-        guardarSesionBarbero(true);
-        verificarAutenticacion();
-        mostrarToast('Sesión iniciada correctamente.', 'success');
-      } else if (r.bloqueado) {
-        actualizarCuentaBloqueo();
-        mostrarToast('Acceso bloqueado temporalmente por intentos fallidos.', 'error');
-      } else {
-        mostrarToast(`PIN incorrecto. Intentos restantes: ${r.restantes}.`, 'error');
-        pinInput.focus();
-      }
-    } catch (err) {
-      mostrarToast(err.message, 'error');
+      });
     }
-  });
+  } else {
+    prepararModoPin();
+    actualizarCuentaBloqueo();
 
-  btnLogout.addEventListener('click', () => {
-    guardarSesionBarbero(false);
+    pinForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pin = pinInput.value.trim();
+      try {
+        if (!pinConfigurado()) {
+          if (pin !== pinConfirmInput.value.trim()) {
+            mostrarToast('Los PIN no coinciden.', 'error');
+            return;
+          }
+          await configurarPinBarbero(pin);
+          prepararModoPin();
+        }
+        const r = await verificarPinBarbero(pin);
+        pinInput.value = '';
+        pinConfirmInput.value = '';
+        if (r.ok) {
+          guardarSesionBarbero(true);
+          verificarAutenticacion();
+          mostrarToast('Sesión iniciada correctamente.', 'success');
+        } else if (r.bloqueado) {
+          actualizarCuentaBloqueo();
+          mostrarToast('Acceso bloqueado temporalmente por intentos fallidos.', 'error');
+        } else {
+          mostrarToast(`PIN incorrecto. Intentos restantes: ${r.restantes}.`, 'error');
+          pinInput.focus();
+        }
+      } catch (err) {
+        mostrarToast(err.message, 'error');
+      }
+    });
+  }
+
+  btnLogout.addEventListener('click', async () => {
+    await cerrarSesionBarberoSupabase();
     verificarAutenticacion();
     mostrarToast('Sesión cerrada.', 'info');
   });
@@ -211,14 +248,15 @@ function configurarEventosAgenda() {
   });
 
   if (btnCerrarDia) {
-    btnCerrarDia.addEventListener('click', () => {
+    btnCerrarDia.addEventListener('click', async () => {
       try {
-        const cerrado = alternarDiaCerrado(estadoPanel.fechaActual);
+        const actualmenteCerrado = btnCerrarDia.dataset.cerrado === '1';
+        const cerrado = await alternarDiaCerradoAsync(estadoPanel.fechaActual, actualmenteCerrado);
         mostrarToast(
           cerrado ? `Día ${estadoPanel.fechaActual} cerrado para nuevas citas.` : `Día ${estadoPanel.fechaActual} reabierto.`,
           'info'
         );
-        renderizarBloqueos();
+        await cargarTurnos();
       } catch (err) {
         mostrarToast(err.message, 'error');
       }
@@ -235,7 +273,7 @@ function configurarEventosAgenda() {
     modalManual.classList.remove('active');
   });
 
-  formManual.addEventListener('submit', (e) => {
+  formManual.addEventListener('submit', async (e) => {
     e.preventDefault();
     const cliente = document.getElementById('manualCliente').value.trim();
     const telefono = document.getElementById('manualTelefono').value.trim();
@@ -245,7 +283,7 @@ function configurarEventosAgenda() {
     const notas = document.getElementById('manualNotas').value.trim();
 
     try {
-      crearReserva({
+      await crearReservaManualBarberoAsync({
         cliente,
         telefono,
         servicioId,
@@ -257,7 +295,7 @@ function configurarEventosAgenda() {
       mostrarToast(`Turno registrado para ${cliente} a las ${hora} hs.`, 'success');
       formManual.reset();
       modalManual.classList.remove('active');
-      cargarTurnos();
+      await cargarTurnos();
     } catch (err) {
       mostrarToast(err.message, 'error');
     }
@@ -287,10 +325,19 @@ function actualizarTextoFechaTitulo() {
 /**
  * Carga y renderiza los turnos del día
  */
-function cargarTurnos() {
-  const todas = obtenerReservas();
+async function cargarTurnos() {
+  let todas = [];
+  let disp = { diaCerrado: false, horasBloqueadas: [] };
+  try {
+    [todas, disp] = await Promise.all([
+      obtenerReservasBarberoAsync(estadoPanel.fechaActual),
+      cargarDisponibilidadFecha(estadoPanel.fechaActual)
+    ]);
+  } catch (err) {
+    mostrarToast(err.message, 'error');
+  }
   const reservasDia = todas.filter(r => r.fecha === estadoPanel.fechaActual);
-  renderizarBloqueos(todas);
+  renderizarBloqueos(reservasDia, disp);
 
   // Calcular métricas del día (independiente de los filtros)
   actualizarMetricas(reservasDia);
@@ -411,30 +458,42 @@ function renderizarListaTurnos(turnos) {
     // Eventos de botones de acción
     const btnComp = card.querySelector('[data-action="completar"]');
     if (btnComp) {
-      btnComp.addEventListener('click', () => {
-        actualizarEstadoReserva(t.id, 'completado');
-        mostrarToast(`Turno de ${t.cliente} marcado como completado.`, 'success');
-        cargarTurnos();
+      btnComp.addEventListener('click', async () => {
+        try {
+          await actualizarEstadoReservaAsync(t.id, 'completado');
+          mostrarToast(`Turno de ${t.cliente} marcado como completado.`, 'success');
+          await cargarTurnos();
+        } catch (err) {
+          mostrarToast(err.message, 'error');
+        }
       });
     }
 
     const btnCanc = card.querySelector('[data-action="cancelar"]');
     if (btnCanc) {
-      btnCanc.addEventListener('click', () => {
+      btnCanc.addEventListener('click', async () => {
         if (confirm(`¿Cancelar el turno de las ${t.hora} de ${t.cliente}?`)) {
-          cancelarReserva(t.id);
-          mostrarToast(`Turno de ${t.cliente} cancelado.`, 'info');
-          cargarTurnos();
+          try {
+            await actualizarEstadoReservaAsync(t.id, 'cancelado');
+            mostrarToast(`Turno de ${t.cliente} cancelado.`, 'info');
+            await cargarTurnos();
+          } catch (err) {
+            mostrarToast(err.message, 'error');
+          }
         }
       });
     }
 
     const btnReac = card.querySelector('[data-action="reactivar"]');
     if (btnReac) {
-      btnReac.addEventListener('click', () => {
-        actualizarEstadoReserva(t.id, 'confirmado');
-        mostrarToast(`Turno de ${t.cliente} reactivado.`, 'success');
-        cargarTurnos();
+      btnReac.addEventListener('click', async () => {
+        try {
+          await actualizarEstadoReservaAsync(t.id, 'confirmado');
+          mostrarToast(`Turno de ${t.cliente} reactivado.`, 'success');
+          await cargarTurnos();
+        } catch (err) {
+          mostrarToast(err.message, 'error');
+        }
       });
     }
 
@@ -445,12 +504,13 @@ function renderizarListaTurnos(turnos) {
 /**
  * Bloqueo rápido: cada franja del día se marca/desmarca como No disponible
  */
-function renderizarBloqueos(todasLasReservas) {
+function renderizarBloqueos(reservasDia = [], disp = { diaCerrado: false, horasBloqueadas: [] }) {
   if (!bloqueoGrid) return;
   const fecha = estadoPanel.fechaActual;
-  const diaCerrado = estaDiaCerrado(fecha);
+  const diaCerrado = Boolean(disp.diaCerrado);
 
   if (btnCerrarDia) {
+    btnCerrarDia.dataset.cerrado = diaCerrado ? '1' : '0';
     btnCerrarDia.textContent = diaCerrado ? 'Reabrir día' : 'Cerrar día completo';
     btnCerrarDia.style.color = diaCerrado ? 'var(--success)' : 'var(--danger)';
     btnCerrarDia.style.borderColor = diaCerrado ? 'var(--success)' : 'rgba(239, 68, 68, 0.35)';
@@ -464,11 +524,11 @@ function renderizarBloqueos(todasLasReservas) {
   bloqueoGrid.style.pointerEvents = diaCerrado ? 'none' : 'auto';
 
   const ocupadas = new Set(
-    (todasLasReservas || obtenerReservas())
+    reservasDia
       .filter(r => r.fecha === fecha && r.estado !== 'cancelado')
       .map(r => r.hora)
   );
-  const bloqueadas = new Set(obtenerHorasBloqueadas(fecha));
+  const bloqueadas = new Set(disp.horasBloqueadas || []);
   bloqueoGrid.textContent = '';
   generarSlotsDisponibles().forEach(hora => {
     const btn = document.createElement('button');
@@ -480,16 +540,17 @@ function renderizarBloqueos(todasLasReservas) {
       btn.disabled = true;
       btn.title = 'Con turno activo';
     } else {
-      btn.title = bloqueadas.has(hora) ? 'Bloqueado: clic para liberar' : 'Libre: clic para bloquear';
-      if (bloqueadas.has(hora)) btn.setAttribute('aria-pressed', 'true');
-      btn.addEventListener('click', () => {
+      const estaBloqueada = bloqueadas.has(hora);
+      btn.title = estaBloqueada ? 'Bloqueado: clic para liberar' : 'Libre: clic para bloquear';
+      if (estaBloqueada) btn.setAttribute('aria-pressed', 'true');
+      btn.addEventListener('click', async () => {
         try {
-          const ahoraBloqueada = alternarBloqueoHora(fecha, hora);
+          const ahoraBloqueada = await alternarBloqueoHoraAsync(fecha, hora, estaBloqueada);
           mostrarToast(`${hora} ${ahoraBloqueada ? 'bloqueada (No disponible)' : 'liberada'}.`, 'info');
+          await cargarTurnos();
         } catch (err) {
           mostrarToast(err.message, 'error');
         }
-        renderizarBloqueos();
       });
     }
     bloqueoGrid.appendChild(btn);
@@ -531,7 +592,7 @@ function mostrarToast(mensaje, tipo = 'info') {
 
 function registrarServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
       console.log('ServiceWorker barbero no disponible:', err);
     });
   }

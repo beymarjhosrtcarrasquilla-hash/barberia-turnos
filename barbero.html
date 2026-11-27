@@ -30,16 +30,31 @@
     </div>
   </header>
 
-  <!-- PANTALLA DE ACCESO POR PIN -->
+  <!-- PANTALLA DE ACCESO DEL BARBERO (Supabase Auth / PIN local) -->
   <section id="authSection" style="display: none; padding: 60px 20px;">
     <div class="container" style="max-width: 380px; text-align: center;">
       <div class="booking-panel" style="padding: 28px 24px;">
-        <h2 id="pinTitulo" style="font-size: 1.25rem; margin-bottom: 6px;">Acceso Privado</h2>
+        <h2 id="pinTitulo" style="font-size: 1.25rem; margin-bottom: 6px;">Acceso Barbero</h2>
         <p id="pinSubtitulo" style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
-          Ingresa el PIN para gestionar los turnos.
+          Inicia sesión con tu cuenta de barbero en Supabase.
         </p>
 
-        <form id="pinForm">
+        <form id="supabaseAuthForm" style="display: none;">
+          <div class="form-group" style="text-align: left;">
+            <label for="barberoEmail" class="form-label">Correo electrónico</label>
+            <input type="email" id="barberoEmail" class="form-input" autocomplete="email" placeholder="barbero@franbarbe.com" required>
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label for="barberoPassword" class="form-label">Contraseña</label>
+            <input type="password" id="barberoPassword" class="form-input" autocomplete="current-password" placeholder="••••••••" required>
+          </div>
+          <p id="authMensaje" role="alert" style="color: var(--danger); font-size: 0.82rem; min-height: 1em;"></p>
+          <button type="submit" id="authSubmitBtn" class="btn-primary-large" style="margin-top: 10px;">
+            Iniciar sesión
+          </button>
+        </form>
+
+        <form id="pinForm" style="display: none;">
           <div class="form-group" style="text-align: left;">
             <label for="pinInput" class="form-label">PIN</label>
             <input type="password" id="pinInput" class="form-input" inputmode="numeric" pattern="[0-9]{4,8}" autocomplete="current-password" placeholder="••••" maxlength="8" style="font-size: 1.3rem; text-align: center; letter-spacing: 0.3em;" required>

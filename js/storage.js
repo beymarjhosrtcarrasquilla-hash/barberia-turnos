@@ -4,10 +4,13 @@
  * migración directa a Firebase / Supabase / REST API sin cambiar la interfaz.
  */
 
+import { SUPABASE_CONFIG } from './config.js';
+
 const STORAGE_KEYS = {
   RESERVAS: 'barberia_reservas_v1',
   CONFIG: 'barberia_config_v1',
   SESION_BARBERO: 'barberia_sesion_barbero',
+  SUPABASE_SESSION: 'barberia_supabase_session_v1',
   PIN: 'barberia_pin_v1',
   INTENTOS: 'barberia_pin_intentos_v1',
   BLOQUEOS: 'barberia_bloqueos_v1',
@@ -329,63 +332,330 @@ export function crearAdaptadorSupabase({ url, anonKey }) {
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url || '') || !anonKey) {
     throw new Error('Configuración de Supabase inválida (url/anonKey).');
   }
-  const headers = {
-    apikey: anonKey,
-    Authorization: `Bearer ${anonKey}`,
-    'Content-Type': 'application/json'
+  const baseUrl = url.replace(/\/+$/, '');
+  const esJwt = anonKey.startsWith('eyJ');
+
+  const leerSesion = () => {
+    try {
+      const raw = typeof sessionStorage !== 'undefined'
+        ? sessionStorage.getItem(STORAGE_KEYS.SUPABASE_SESSION)
+        : null;
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      return s && s.access_token ? s : null;
+    } catch (_) {
+      return null;
+    }
   };
+
+  const guardarSesion = (sesion) => {
+    if (typeof sessionStorage === 'undefined') return;
+    if (sesion) {
+      sessionStorage.setItem(STORAGE_KEYS.SUPABASE_SESSION, JSON.stringify(sesion));
+    } else {
+      sessionStorage.removeItem(STORAGE_KEYS.SUPABASE_SESSION);
+    }
+  };
+
+  const buildHeaders = (token = null, extra = {}) => {
+    const h = {
+      apikey: anonKey,
+      'Content-Type': 'application/json',
+      ...extra
+    };
+    if (token) {
+      h.Authorization = `Bearer ${token}`;
+    } else if (esJwt) {
+      h.Authorization = `Bearer ${anonKey}`;
+    }
+    return h;
+  };
+
+  const parseError = async (res, fallback) => {
+    try {
+      const err = await res.json();
+      return err.error_description || err.msg || err.message || fallback;
+    } catch (_) {
+      return fallback;
+    }
+  };
+
+  const normalizarHora = (h) => String(h || '').slice(0, 5);
+
+  const enriquecerReserva = (row) => {
+    const s = SERVICIOS.find((x) => x.id === row.servicio_id) || {};
+    return {
+      id: row.id,
+      codigo: row.codigo,
+      cliente: row.cliente,
+      telefono: row.telefono,
+      email: row.email || '',
+      servicioId: row.servicio_id,
+      servicioNombre: s.nombre || row.servicio_id,
+      precio: Number(s.precio) || 0,
+      duracionMinutos: Number(s.duracionMinutos) || 30,
+      fecha: row.fecha,
+      hora: normalizarHora(row.hora),
+      estado: row.estado,
+      notas: row.notas || '',
+      creadoEn: row.creado_en
+    };
+  };
+
+  const asegurarTokenBarbero = async () => {
+    let sesion = leerSesion();
+    if (!sesion) throw new Error('Sesión de barbero no iniciada.');
+    const ahora = Math.floor(Date.now() / 1000);
+    if (sesion.expires_at && sesion.expires_at - 30 <= ahora && sesion.refresh_token) {
+      const r = await fetch(`${baseUrl}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: buildHeaders(null),
+        body: JSON.stringify({ refresh_token: sesion.refresh_token })
+      });
+      if (!r.ok) {
+        guardarSesion(null);
+        throw new Error('Tu sesión expiró. Inicia sesión nuevamente.');
+      }
+      const data = await r.json();
+      sesion = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: Math.floor(Date.now() / 1000) + (Number(data.expires_in) || 3600),
+        user: data.user || sesion.user
+      };
+      guardarSesion(sesion);
+    }
+    return sesion.access_token;
+  };
+
   return {
     nombre: 'supabase',
-    // El cliente público nunca lee reservas ajenas: solo crea y consulta horas ocupadas.
-    async crearReserva(reserva) {
-      const r = await fetch(`${url}/rest/v1/rpc/crear_reserva`, {
+    url: baseUrl,
+    // Compatibilidad con interfaz leer/escribir
+    leer: () => null,
+    escribir: () => {},
+
+    // Autenticación del barbero (Supabase Auth)
+    async signIn(email, password) {
+      const r = await fetch(`${baseUrl}/auth/v1/token?grant_type=password`, {
         method: 'POST',
-        headers,
+        headers: buildHeaders(null),
+        body: JSON.stringify({ email: String(email || '').trim(), password: String(password || '') })
+      });
+      if (!r.ok) {
+        throw new Error(await parseError(r, 'Correo o contraseña incorrectos.'));
+      }
+      const data = await r.json();
+      const sesion = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: Math.floor(Date.now() / 1000) + (Number(data.expires_in) || 3600),
+        user: data.user || null
+      };
+      guardarSesion(sesion);
+      return sesion;
+    },
+
+    async signOut() {
+      const sesion = leerSesion();
+      if (sesion?.access_token) {
+        await fetch(`${baseUrl}/auth/v1/logout`, {
+          method: 'POST',
+          headers: buildHeaders(sesion.access_token)
+        }).catch(() => {});
+      }
+      guardarSesion(null);
+    },
+
+    getSession() {
+      return leerSesion();
+    },
+
+    // Operaciones públicas (cliente anónimo vía RPC / lectura pública RLS)
+    async crearReserva(reserva) {
+      const r = await fetch(`${baseUrl}/rest/v1/rpc/crear_reserva`, {
+        method: 'POST',
+        headers: buildHeaders(null),
         body: JSON.stringify({
           p_cliente: reserva.cliente,
           p_telefono: reserva.telefono,
-          p_email: reserva.email,
+          p_email: reserva.email || null,
           p_servicio_id: reserva.servicioId,
           p_fecha: reserva.fecha,
           p_hora: reserva.hora,
-          p_notas: reserva.notas
+          p_notas: reserva.notas || null
         })
       });
-      if (!r.ok) throw new Error('No se pudo crear la reserva.');
-      return r.json();
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo crear la reserva.'));
+      const res = await r.json();
+      const s = SERVICIOS.find((x) => x.id === reserva.servicioId) || {};
+      return {
+        id: res.codigo,
+        codigo: res.codigo,
+        cliente: reserva.cliente,
+        telefono: reserva.telefono,
+        email: reserva.email || '',
+        servicioId: reserva.servicioId,
+        servicioNombre: s.nombre || reserva.servicioId,
+        precio: Number(s.precio) || 0,
+        duracionMinutos: Number(s.duracionMinutos) || 30,
+        fecha: res.fecha || reserva.fecha,
+        hora: normalizarHora(res.hora || reserva.hora),
+        estado: 'confirmado',
+        notas: reserva.notas || ''
+      };
     },
+
     async horasOcupadas(fecha) {
-      const r = await fetch(`${url}/rest/v1/rpc/horas_ocupadas`, {
+      const r = await fetch(`${baseUrl}/rest/v1/rpc/horas_ocupadas`, {
         method: 'POST',
-        headers,
+        headers: buildHeaders(null),
         body: JSON.stringify({ p_fecha: fecha })
       });
-      if (!r.ok) throw new Error('No se pudo consultar disponibilidad.');
-      return r.json();
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo consultar disponibilidad.'));
+      const rows = await r.json();
+      return Array.isArray(rows) ? rows.map(normalizarHora) : [];
     },
-    // Consulta/cancelación del cliente: exige código + teléfono (RPC security definer)
+
+    async obtenerBloqueos(fecha) {
+      const r = await fetch(`${baseUrl}/rest/v1/bloqueos_horario?fecha=eq.${encodeURIComponent(fecha)}&select=hora`, {
+        method: 'GET',
+        headers: buildHeaders(null)
+      });
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo consultar bloqueos.'));
+      const rows = await r.json();
+      return Array.isArray(rows) ? rows.map((x) => normalizarHora(x.hora)) : [];
+    },
+
+    async obtenerDiasCerrados() {
+      const r = await fetch(`${baseUrl}/rest/v1/dias_cerrados?select=fecha`, {
+        method: 'GET',
+        headers: buildHeaders(null)
+      });
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo consultar días cerrados.'));
+      const rows = await r.json();
+      return Array.isArray(rows) ? rows.map((x) => x.fecha) : [];
+    },
+
     async consultarReserva(codigo, telefono) {
-      const r = await fetch(`${url}/rest/v1/rpc/consultar_reserva_cliente`, {
+      const r = await fetch(`${baseUrl}/rest/v1/rpc/consultar_reserva_cliente`, {
         method: 'POST',
-        headers,
+        headers: buildHeaders(null),
         body: JSON.stringify({ p_codigo: codigo, p_telefono: telefono })
       });
-      if (!r.ok) throw new Error('No se pudo consultar la reserva.');
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo consultar la reserva.'));
+      const data = await r.json();
+      if (!data) return null;
+      const s = SERVICIOS.find((x) => x.id === data.servicio_id) || {};
+      return {
+        codigo: data.codigo,
+        servicioId: data.servicio_id,
+        servicioNombre: s.nombre || data.servicio_id,
+        precio: Number(s.precio) || 0,
+        fecha: data.fecha,
+        hora: normalizarHora(data.hora),
+        estado: data.estado
+      };
+    },
+
+    async cancelarReserva(codigo, telefono) {
+      const r = await fetch(`${baseUrl}/rest/v1/rpc/cancelar_reserva_cliente`, {
+        method: 'POST',
+        headers: buildHeaders(null),
+        body: JSON.stringify({ p_codigo: codigo, p_telefono: telefono })
+      });
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo cancelar la reserva.'));
       return r.json();
     },
-    async cancelarReserva(codigo, telefono) {
-      const r = await fetch(`${url}/rest/v1/rpc/cancelar_reserva_cliente`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ p_codigo: codigo, p_telefono: telefono })
+
+    // Operaciones del barbero autenticado (RLS)
+    async listarReservas(fecha = null) {
+      const token = await asegurarTokenBarbero();
+      const filtroFecha = fecha ? `&fecha=eq.${encodeURIComponent(fecha)}` : '';
+      const r = await fetch(`${baseUrl}/rest/v1/reservas?select=*${filtroFecha}&order=fecha.asc,hora.asc`, {
+        method: 'GET',
+        headers: buildHeaders(token)
       });
-      if (!r.ok) throw new Error('No se pudo cancelar la reserva.');
-      return r.json();
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudieron cargar los turnos.'));
+      const rows = await r.json();
+      return Array.isArray(rows) ? rows.map(enriquecerReserva) : [];
+    },
+
+    async crearReservaManual(reserva) {
+      const token = await asegurarTokenBarbero();
+      const r = await fetch(`${baseUrl}/rest/v1/reservas`, {
+        method: 'POST',
+        headers: buildHeaders(token, { Prefer: 'return=representation' }),
+        body: JSON.stringify({
+          cliente: reserva.cliente,
+          telefono: reserva.telefono,
+          email: reserva.email || null,
+          servicio_id: reserva.servicioId,
+          fecha: reserva.fecha,
+          hora: reserva.hora,
+          estado: 'confirmado',
+          notas: reserva.notas || null
+        })
+      });
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo registrar el turno manual.'));
+      const rows = await r.json();
+      return Array.isArray(rows) && rows[0] ? enriquecerReserva(rows[0]) : null;
+    },
+
+    async actualizarEstadoReserva(id, nuevoEstado) {
+      const token = await asegurarTokenBarbero();
+      const r = await fetch(`${baseUrl}/rest/v1/reservas?id=eq.${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: buildHeaders(token, { Prefer: 'return=representation' }),
+        body: JSON.stringify({ estado: nuevoEstado })
+      });
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo actualizar el turno.'));
+      const rows = await r.json();
+      return Array.isArray(rows) && rows[0] ? enriquecerReserva(rows[0]) : null;
+    },
+
+    async alternarBloqueoHora(fecha, hora, bloquear) {
+      const token = await asegurarTokenBarbero();
+      if (bloquear) {
+        const r = await fetch(`${baseUrl}/rest/v1/bloqueos_horario`, {
+          method: 'POST',
+          headers: buildHeaders(token, { Prefer: 'return=minimal' }),
+          body: JSON.stringify({ fecha, hora })
+        });
+        if (!r.ok) throw new Error(await parseError(r, 'No se pudo bloquear el horario.'));
+        return true;
+      }
+      const horaSql = hora.length === 5 ? `${hora}:00` : hora;
+      const r = await fetch(
+        `${baseUrl}/rest/v1/bloqueos_horario?fecha=eq.${encodeURIComponent(fecha)}&hora=eq.${encodeURIComponent(horaSql)}`,
+        { method: 'DELETE', headers: buildHeaders(token) }
+      );
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo liberar el horario.'));
+      return false;
+    },
+
+    async alternarDiaCerrado(fecha, cerrar) {
+      const token = await asegurarTokenBarbero();
+      if (cerrar) {
+        const r = await fetch(`${baseUrl}/rest/v1/dias_cerrados`, {
+          method: 'POST',
+          headers: buildHeaders(token, { Prefer: 'return=minimal' }),
+          body: JSON.stringify({ fecha })
+        });
+        if (!r.ok) throw new Error(await parseError(r, 'No se pudo cerrar el día.'));
+        return true;
+      }
+      const r = await fetch(
+        `${baseUrl}/rest/v1/dias_cerrados?fecha=eq.${encodeURIComponent(fecha)}`,
+        { method: 'DELETE', headers: buildHeaders(token) }
+      );
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo reabrir el día.'));
+      return false;
     }
   };
 }
 
-let adaptador = adaptadorLocal;
+let adaptador = crearAdaptadorSupabase(SUPABASE_CONFIG);
 export function configurarAdaptador(nuevo) {
   if (!nuevo || typeof nuevo.leer !== 'function' || typeof nuevo.escribir !== 'function') {
     throw new Error('Adaptador no compatible con la interfaz leer/escribir.');
@@ -394,6 +664,104 @@ export function configurarAdaptador(nuevo) {
 }
 export function obtenerAdaptadorActivo() {
   return adaptador;
+}
+export function esModoSupabase() {
+  return adaptador && adaptador.nombre === 'supabase';
+}
+
+/* ==========================================================================
+ * API UNIFICADA ASÍNCRONA (Supabase por defecto, fallback a adaptador local)
+ * ========================================================================== */
+export async function cargarDisponibilidadFecha(fecha) {
+  if (!esModoSupabase()) {
+    return {
+      diaCerrado: estaDiaCerrado(fecha),
+      horasOcupadas: obtenerHorasOcupadasPorFecha(fecha),
+      horasBloqueadas: obtenerHorasBloqueadas(fecha)
+    };
+  }
+  const [diasCerrados, horasOcupadas, horasBloqueadas] = await Promise.all([
+    adaptador.obtenerDiasCerrados(),
+    adaptador.horasOcupadas(fecha),
+    adaptador.obtenerBloqueos(fecha)
+  ]);
+  return {
+    diaCerrado: diasCerrados.includes(fecha),
+    horasOcupadas,
+    horasBloqueadas
+  };
+}
+
+export async function crearReservaAsync(datos) {
+  if (!esModoSupabase()) return crearReserva(datos);
+  const validada = validarReserva(datos);
+  return adaptador.crearReserva(validada);
+}
+
+export async function consultarReservaClienteAsync(codigo, telefono) {
+  if (!esModoSupabase()) return consultarReservaCliente(codigo, telefono);
+  const cod = sanitizarTexto(codigo, 12).toUpperCase();
+  const tel = normalizarTelefonoCO(telefono);
+  if (!/^BARB-\d{3,4}$/.test(cod) || !tel) return null;
+  return adaptador.consultarReserva(cod, tel);
+}
+
+export async function cancelarReservaClienteAsync(codigo, telefono) {
+  if (!esModoSupabase()) return cancelarReservaCliente(codigo, telefono);
+  const cod = sanitizarTexto(codigo, 12).toUpperCase();
+  const tel = normalizarTelefonoCO(telefono);
+  if (!/^BARB-\d{3,4}$/.test(cod) || !tel) {
+    throw new Error('Código o teléfono inválido.');
+  }
+  await adaptador.cancelarReserva(cod, tel);
+  return consultarReservaClienteAsync(cod, tel);
+}
+
+export function tieneSesionBarberoSupabase() {
+  return esModoSupabase() ? Boolean(adaptador.getSession()) : tieneSesionBarberoActiva();
+}
+
+export async function iniciarSesionBarberoSupabase(email, password) {
+  if (!esModoSupabase()) throw new Error('El adaptador activo no es Supabase.');
+  return adaptador.signIn(email, password);
+}
+
+export async function cerrarSesionBarberoSupabase() {
+  if (esModoSupabase()) {
+    await adaptador.signOut();
+  } else {
+    guardarSesionBarbero(false);
+  }
+}
+
+export async function obtenerReservasBarberoAsync(fecha = null) {
+  if (!esModoSupabase()) return obtenerReservas();
+  return adaptador.listarReservas(fecha);
+}
+
+export async function crearReservaManualBarberoAsync(datos) {
+  if (!esModoSupabase()) return crearReserva(datos);
+  const validada = validarReserva(datos);
+  return adaptador.crearReservaManual(validada);
+}
+
+export async function actualizarEstadoReservaAsync(id, nuevoEstado) {
+  if (!esModoSupabase()) return actualizarEstadoReserva(id, nuevoEstado);
+  return adaptador.actualizarEstadoReserva(id, nuevoEstado);
+}
+
+export async function alternarBloqueoHoraAsync(fecha, hora, actualmenteBloqueada) {
+  if (!esModoSupabase()) return alternarBloqueoHora(fecha, hora);
+  if (!RE_FECHA.test(String(fecha)) || !RE_HORA.test(String(hora)) || !generarSlotsDisponibles().includes(hora)) {
+    throw new Error('Franja horaria inválida.');
+  }
+  return adaptador.alternarBloqueoHora(fecha, hora, !actualmenteBloqueada);
+}
+
+export async function alternarDiaCerradoAsync(fecha, actualmenteCerrado) {
+  if (!esModoSupabase()) return alternarDiaCerrado(fecha);
+  if (!RE_FECHA.test(String(fecha))) throw new Error('Fecha inválida.');
+  return adaptador.alternarDiaCerrado(fecha, !actualmenteCerrado);
 }
 
 /* ==========================================================================

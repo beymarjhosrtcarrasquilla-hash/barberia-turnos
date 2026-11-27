@@ -1,10 +1,11 @@
-const CACHE_NAME = 'barberia-cache-v2';
+const CACHE_NAME = 'barberia-cache-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './barbero.html',
   './comparador.html',
   './styles/main.css',
+  './js/config.js',
   './js/storage.js',
   './js/app.js',
   './js/barbero.js',
@@ -34,8 +35,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Evitar interceptar el endpoint de LiveReload
-  if (event.request.url.includes('__live_reload')) {
+  // Evitar interceptar LiveReload o peticiones a la API de Supabase
+  if (event.request.url.includes('__live_reload') || event.request.url.includes('supabase.co')) {
     return;
   }
 

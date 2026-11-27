@@ -2,12 +2,10 @@ import {
   NEGOCIO_CONFIG,
   SERVICIOS,
   generarSlotsDisponibles,
-  obtenerHorasOcupadasPorFecha,
-  obtenerHorasBloqueadas,
-  estaDiaCerrado,
-  crearReserva,
-  consultarReservaCliente,
-  cancelarReservaCliente,
+  cargarDisponibilidadFecha,
+  crearReservaAsync,
+  consultarReservaClienteAsync,
+  cancelarReservaClienteAsync,
   formatearFechaISO,
   formatearCOP,
   escaparHTML
@@ -112,25 +110,32 @@ function configurarConsultaCita() {
       btn.type = 'button';
       btn.className = 'btn-secondary';
       btn.textContent = 'Cancelar mi cita';
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         if (!confirm('¿Seguro que deseas cancelar tu cita?')) return;
+        btn.disabled = true;
         try {
-          const r = cancelarReservaCliente(consultaCodigo.value, consultaTelefono.value);
+          const r = await cancelarReservaClienteAsync(consultaCodigo.value, consultaTelefono.value);
           mostrar(r, 'Tu cita fue cancelada y el horario quedó libre.', 'success');
-          renderizarSlotsHorarios();
+          await renderizarSlotsHorarios();
         } catch (err) {
           mostrar(null, err.message, 'error');
+        } finally {
+          btn.disabled = false;
         }
       });
       consultaResultado.appendChild(btn);
     }
   };
 
-  consultaForm.addEventListener('submit', (e) => {
+  consultaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const r = consultarReservaCliente(consultaCodigo.value, consultaTelefono.value);
-    if (!r) mostrar(null, 'No encontramos una cita con ese código y teléfono.', 'error');
-    else mostrar(r, '', 'info');
+    try {
+      const r = await consultarReservaClienteAsync(consultaCodigo.value, consultaTelefono.value);
+      if (!r) mostrar(null, 'No encontramos una cita con ese código y teléfono.', 'error');
+      else mostrar(r, '', 'info');
+    } catch (err) {
+      mostrar(null, err.message, 'error');
+    }
   });
 }
 
@@ -216,7 +221,7 @@ function inicializarSelectorFecha() {
 /**
  * Renderiza los horarios disponibles detectando ocupación en tiempo real
  */
-function renderizarSlotsHorarios() {
+async function renderizarSlotsHorarios() {
   const fecha = estadoReserva.fechaSeleccionada;
   if (!fecha) {
     slotsContainer.innerHTML = '';
@@ -228,7 +233,20 @@ function renderizarSlotsHorarios() {
   slotsVacioMsg.textContent = 'No hay turnos disponibles para esta fecha.';
   slotsContainer.innerHTML = '';
 
-  if (estaDiaCerrado(fecha)) {
+  let diaCerrado = false;
+  let horasOcupadas = [];
+  let horasBloqueadas = [];
+  try {
+    const disp = await cargarDisponibilidadFecha(fecha);
+    diaCerrado = disp.diaCerrado;
+    horasOcupadas = disp.horasOcupadas;
+    horasBloqueadas = disp.horasBloqueadas;
+  } catch (err) {
+    console.warn('Error consultando disponibilidad en Supabase:', err);
+    mostrarToast('No se pudo verificar disponibilidad en el servidor.', 'error');
+  }
+
+  if (diaCerrado) {
     slotsVacioMsg.textContent = 'La barbería no atiende en esta fecha (día cerrado).';
     slotsVacioMsg.style.display = 'block';
     estadoReserva.horaSeleccionada = null;
@@ -237,8 +255,6 @@ function renderizarSlotsHorarios() {
   }
 
   const todosLosSlots = generarSlotsDisponibles();
-  const horasOcupadas = obtenerHorasOcupadasPorFecha(fecha);
-  const horasBloqueadas = obtenerHorasBloqueadas(fecha); // no disponibles: se ocultan al cliente
 
   // Si la fecha seleccionada es hoy, bloquear horas que ya pasaron
   const ahora = new Date();
@@ -326,7 +342,7 @@ function actualizarResumen() {
  * Configura los eventos del formulario y envío de reserva
  */
 function configurarEventosFormulario() {
-  bookingForm.addEventListener('submit', (e) => {
+  bookingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const nombre = document.getElementById('clienteNombre').value.trim();
@@ -344,9 +360,10 @@ function configurarEventosFormulario() {
       return;
     }
 
+    btnSubmit.disabled = true;
     try {
       // Intentar crear la reserva evitando colisiones
-      const nuevaReserva = crearReserva({
+      const nuevaReserva = await crearReservaAsync({
         cliente: nombre,
         telefono,
         email,
@@ -362,10 +379,12 @@ function configurarEventosFormulario() {
 
       // Limpiar formulario y refrescar slots
       bookingForm.reset();
-      renderizarSlotsHorarios();
+      await renderizarSlotsHorarios();
     } catch (err) {
       mostrarToast(err.message, 'error');
-      renderizarSlotsHorarios();
+      await renderizarSlotsHorarios();
+    } finally {
+      actualizarResumen();
     }
   });
 
@@ -473,7 +492,7 @@ function mostrarToast(mensaje, tipo = 'info') {
  */
 function registrarServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
       console.log('ServiceWorker no disponible en este contexto:', err);
     });
   }
