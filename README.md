@@ -1,4 +1,4 @@
-# ✂️ Elite Barber Studio — Sistema Web de Turnos & Agenda
+# ✂️ Fran Barbe (Cali, Colombia) — Sistema Web de Turnos & Agenda
 
 Aplicación web moderna, profesional y ultraligera para reserva y gestión de turnos de una barbería. Diseñada bajo estándares web nativos para garantizar un rendimiento óptimo en equipos con hardware modesto (4 GB de RAM y procesadores Core 2 Duo), sin dependencias pesadas de compilación.
 
@@ -70,7 +70,7 @@ barberia-turnos/
 ## ☁️ Publicación y Persistencia en Producción
 
 ### Estado Actual:
-El proyecto almacena las reservas localmente mediante la capa abstracta `storage.js` (`localStorage`), incluyendo datos de prueba claramente marcados como `[DEMO]`.
+El proyecto almacena las reservas localmente mediante la capa abstracta `storage.js` (`localStorage`), con la agenda inicial vacía (sin turnos de demostración).
 
 ### Pasos para Poner en Producción (100% Gratuito):
 1. **Frontend Público:** Se puede publicar con 1 clic en **GitHub Pages**, **Cloudflare Pages** o **Vercel Hobby** (costo $0 permanente).

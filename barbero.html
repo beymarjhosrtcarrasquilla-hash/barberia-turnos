@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal Barbero | Elite Barber Studio</title>
+  <title>Portal Barbero | Fran Barbe</title>
   <meta name="theme-color" content="#0f1217">
   
   <link rel="manifest" href="manifest.json">
@@ -74,7 +74,7 @@
       </div>
       <div class="metric-card">
         <span class="metric-title">Ingresos</span>
-        <span class="metric-value highlight" id="metIngresos">$0.00</span>
+        <span class="metric-value highlight" id="metIngresos">$0</span>
       </div>
     </section>
 
@@ -99,10 +99,16 @@
           <span>+</span> Nuevo Turno
         </button>
 
-        <button type="button" id="btnResetDemo" class="nav-btn" title="Restablecer datos demo" style="font-size: 0.85rem; color: var(--text-dim);">
-          ↺ Reset Demo
-        </button>
       </div>
+    </section>
+
+    <!-- Bloqueo rápido de horarios -->
+    <section class="booking-panel" id="seccionBloqueo" style="margin-bottom: 20px; padding: 16px;">
+      <h3 style="font-size: 1.05rem; margin-bottom: 4px;">Bloqueo rápido de horarios</h3>
+      <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 10px;">
+        Toca una hora para marcarla como <strong>No disponible</strong> (almuerzo, diligencia). Los clientes no la verán. Vuelve a tocarla para liberarla. Las horas con turno activo no se pueden bloquear.
+      </p>
+      <div id="bloqueoGrid" class="slots-container"></div>
     </section>
 
     <!-- Título Dinámico de la Fecha -->
@@ -144,7 +150,7 @@
 
         <div class="form-group">
           <label for="manualTelefono" class="form-label">Teléfono *</label>
-          <input type="tel" id="manualTelefono" class="form-input" placeholder="+54 9 11 ..." required>
+          <input type="tel" id="manualTelefono" class="form-input" placeholder="3001234567 o +57 300 123 4567" required>
         </div>
 
         <div class="form-group">
@@ -183,7 +189,7 @@
   <!-- Pie de Página -->
   <footer>
     <div class="container">
-      <p>© 2026 Elite Barber Studio • Panel de Gestión de Turnos</p>
+      <p>© 2026 Fran Barbe • Cali, Colombia • Panel de Gestión de Turnos</p>
     </div>
   </footer>
 

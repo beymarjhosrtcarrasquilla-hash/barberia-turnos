@@ -1,11 +1,11 @@
 {
-  "name": "Elite Barber Studio - Turnos & Agenda",
-  "short_name": "BarberiaApp",
+  "name": "Fran Barbe - Turnos & Agenda (Cali)",
+  "short_name": "Fran Barbe",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f1217",
   "theme_color": "#0f1217",
-  "description": "Sistema de gestión y reserva de turnos online para barbería moderna",
+  "description": "Reserva de turnos de Fran Barbe, barbería en Sector La Nueva Base / Villa, Cali, Colombia. Corte Básico $20.000 y Corte Completo $30.000 COP.",
   "orientation": "portrait-primary",
   "icons": [
     {

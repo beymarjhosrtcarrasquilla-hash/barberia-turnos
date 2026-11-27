@@ -1,9 +1,15 @@
 import {
+  NEGOCIO_CONFIG,
   SERVICIOS,
   generarSlotsDisponibles,
   obtenerHorasOcupadasPorFecha,
+  obtenerHorasBloqueadas,
   crearReserva,
-  formatearFechaISO
+  consultarReservaCliente,
+  cancelarReservaCliente,
+  formatearFechaISO,
+  formatearCOP,
+  escaparHTML
 } from './storage.js';
 
 // Estado de la reserva en curso
@@ -38,16 +44,94 @@ const btnWhatsApp = document.getElementById('btnWhatsApp');
 const btnCalendar = document.getElementById('btnCalendar');
 const btnCerrarModal = document.getElementById('btnCerrarModal');
 
+// Consulta / cancelación por código
+const consultaForm = document.getElementById('consultaForm');
+const consultaCodigo = document.getElementById('consultaCodigo');
+const consultaTelefono = document.getElementById('consultaTelefono');
+const consultaResultado = document.getElementById('consultaResultado');
+
 /**
  * Inicialización de la aplicación
  */
 document.addEventListener('DOMContentLoaded', () => {
   renderizarServicios();
+  inicializarContactoNegocio();
   inicializarSelectorFecha();
+  configurarConsultaCita();
   configurarEventosFormulario();
   actualizarResumen();
   registrarServiceWorker();
 });
+
+/**
+ * Refleja los datos del negocio (NEGOCIO_CONFIG) en los elementos marcados con data-negocio
+ */
+function inicializarContactoNegocio() {
+  document.querySelectorAll('[data-negocio]').forEach((el) => {
+    const v = NEGOCIO_CONFIG[el.dataset.negocio];
+    if (v) el.textContent = v;
+  });
+  document.querySelectorAll('[data-negocio-wa]').forEach((el) => {
+    el.href = NEGOCIO_CONFIG.whatsappUrl;
+  });
+}
+
+/**
+ * Sección "¿Ya tienes cita?": consulta o cancela con código + teléfono
+ */
+function configurarConsultaCita() {
+  if (!consultaForm) return;
+  const mostrar = (reserva, mensaje, tipo = 'info') => {
+    consultaResultado.textContent = '';
+    if (mensaje) {
+      const p = document.createElement('p');
+      p.className = `consulta-msg ${tipo}`;
+      p.textContent = mensaje;
+      consultaResultado.appendChild(p);
+    }
+    if (!reserva) return;
+    const lista = document.createElement('ul');
+    lista.className = 'consulta-detalle';
+    [
+      ['Código', reserva.codigo],
+      ['Servicio', reserva.servicioNombre],
+      ['Fecha y hora', `${reserva.fecha} a las ${reserva.hora} h`],
+      ['Total', formatearCOP(reserva.precio)],
+      ['Estado', reserva.estado]
+    ].forEach(([k, v]) => {
+      const li = document.createElement('li');
+      const b = document.createElement('strong');
+      b.textContent = `${k}: `;
+      li.append(b, document.createTextNode(String(v)));
+      lista.appendChild(li);
+    });
+    consultaResultado.appendChild(lista);
+    if (reserva.estado === 'confirmado' || reserva.estado === 'pendiente') {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-secondary';
+      btn.textContent = 'Cancelar mi cita';
+      btn.addEventListener('click', () => {
+        if (!confirm('¿Seguro que deseas cancelar tu cita?')) return;
+        try {
+          const r = cancelarReservaCliente(consultaCodigo.value, consultaTelefono.value);
+          mostrar(r, 'Tu cita fue cancelada y el horario quedó libre.', 'success');
+          renderizarSlotsHorarios();
+        } catch (err) {
+          mostrar(null, err.message, 'error');
+        }
+      });
+      consultaResultado.appendChild(btn);
+    }
+  };
+
+  consultaForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const r = consultarReservaCliente(consultaCodigo.value, consultaTelefono.value);
+    if (!r) mostrar(null, 'No encontramos una cita con ese código y teléfono.', 'error');
+    else mostrar(r, '', 'info');
+  });
+}
 
 /**
  * Renderiza el catálogo de servicios
@@ -68,7 +152,7 @@ function renderizarServicios() {
       </div>
       <div class="service-bottom">
         <div class="service-duration">${escaparHTML(servicio.duracionMinutos)} min</div>
-        <div class="service-price">$${escaparHTML(servicio.precio.toFixed(2))}</div>
+        <div class="service-price">${escaparHTML(formatearCOP(servicio.precio))}</div>
       </div>
     `;
 
@@ -144,6 +228,7 @@ function renderizarSlotsHorarios() {
 
   const todosLosSlots = generarSlotsDisponibles();
   const horasOcupadas = obtenerHorasOcupadasPorFecha(fecha);
+  const horasBloqueadas = obtenerHorasBloqueadas(fecha); // no disponibles: se ocultan al cliente
 
   // Si la fecha seleccionada es hoy, bloquear horas que ya pasaron
   const ahora = new Date();
@@ -153,6 +238,7 @@ function renderizarSlotsHorarios() {
   let primerDisponible = null;
 
   todosLosSlots.forEach(hora => {
+    if (horasBloqueadas.includes(hora)) return;
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'slot-btn';
@@ -186,6 +272,8 @@ function renderizarSlotsHorarios() {
     slotsContainer.appendChild(btn);
   });
 
+  if (slotsContainer.children.length === 0) slotsVacioMsg.style.display = 'block';
+
   // Autoseleccionar el primer disponible si no hay uno elegido
   if (!estadoReserva.horaSeleccionada && primerDisponible) {
     const primerBtn = Array.from(slotsContainer.children).find(b => b.textContent === primerDisponible);
@@ -204,10 +292,10 @@ function renderizarSlotsHorarios() {
 function actualizarResumen() {
   if (estadoReserva.servicioSeleccionado) {
     summaryServicio.textContent = estadoReserva.servicioSeleccionado.nombre;
-    summaryPrecio.textContent = `$${estadoReserva.servicioSeleccionado.precio.toFixed(2)}`;
+    summaryPrecio.textContent = formatearCOP(estadoReserva.servicioSeleccionado.precio);
   } else {
     summaryServicio.textContent = 'Ninguno seleccionado';
-    summaryPrecio.textContent = '$0.00';
+    summaryPrecio.textContent = formatearCOP(0);
   }
 
   if (estadoReserva.fechaSeleccionada) {
@@ -217,7 +305,7 @@ function actualizarResumen() {
     summaryFecha.textContent = 'Seleccionar fecha';
   }
 
-  summaryHora.textContent = estadoReserva.horaSeleccionada ? `${estadoReserva.horaSeleccionada} hs` : 'Seleccionar horario';
+  summaryHora.textContent = estadoReserva.horaSeleccionada ? `${estadoReserva.horaSeleccionada} h` : 'Seleccionar horario';
 
   // Habilitar o deshabilitar botón de confirmar
   const completo = estadoReserva.servicioSeleccionado && estadoReserva.fechaSeleccionada && estadoReserva.horaSeleccionada;
@@ -284,19 +372,19 @@ function mostrarModalConfirmacion(reserva) {
   ticketCliente.textContent = reserva.cliente;
   ticketServicio.textContent = reserva.servicioNombre;
   ticketFechaHora.textContent = `${reserva.fecha} a las ${reserva.hora} hs`;
-  ticketTotal.textContent = `$${reserva.precio.toFixed(2)}`;
+  ticketTotal.textContent = formatearCOP(reserva.precio);
 
   // Enlace a WhatsApp de la Barbería con datos pre-cargados
   const mensajeWhatsApp = encodeURIComponent(
-    `Hola! Acabo de reservar un turno en la barbería:\n` +
+    `Hola! Acabo de reservar un turno en ${NEGOCIO_CONFIG.nombre}:\n` +
     `📌 Código: ${reserva.codigo}\n` +
     `👤 Cliente: ${reserva.cliente}\n` +
     `✂️ Servicio: ${reserva.servicioNombre}\n` +
     `📅 Fecha: ${reserva.fecha} a las ${reserva.hora} hs\n` +
     `¡Nos vemos pronto!`
   );
-  // Número de la barbería de demostración
-  btnWhatsApp.href = `https://wa.me/5491144556677?text=${mensajeWhatsApp}`;
+  // WhatsApp provisional de Fran Barbe
+  btnWhatsApp.href = `${NEGOCIO_CONFIG.whatsappUrl}?text=${mensajeWhatsApp}`;
 
   // Generador de archivo .ics para Google Calendar y Apple Calendar
   btnCalendar.onclick = () => generarArchivoICS(reserva);
@@ -312,22 +400,22 @@ function generarArchivoICS(reserva) {
   const [hora, min] = reserva.hora.split(':').map(Number);
 
   const inicio = new Date(anio, mes - 1, dia, hora, min);
-  const fin = new Date(inicio.getTime() + (reserva.duracionMinutos || 45) * 60000);
+  const fin = new Date(inicio.getTime() + (reserva.duracionMinutos || 30) * 60000);
 
   const formatoICS = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
   const icsContent = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Elite Barber Studio//Turnos Web//ES',
+    `PRODID:-//${NEGOCIO_CONFIG.nombre}//Turnos Web//ES`,
     'BEGIN:VEVENT',
     `UID:${reserva.id}@barberia.local`,
     `DTSTAMP:${formatoICS(new Date())}`,
     `DTSTART:${formatoICS(inicio)}`,
     `DTEND:${formatoICS(fin)}`,
-    `SUMMARY:Turno Barbería: ${reserva.servicioNombre}`,
+    `SUMMARY:${NEGOCIO_CONFIG.nombre}: ${reserva.servicioNombre}`,
     `DESCRIPTION:Reserva código ${reserva.codigo} para ${reserva.cliente}.\\nNotas: ${reserva.notas || 'Ninguna'}`,
-    'LOCATION:Av. Corrientes 1420, CABA',
+    `LOCATION:${NEGOCIO_CONFIG.ubicacion}`,
     'STATUS:CONFIRMED',
     'END:VEVENT',
     'END:VCALENDAR'

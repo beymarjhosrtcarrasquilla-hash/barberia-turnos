@@ -9,47 +9,45 @@ const STORAGE_KEYS = {
   CONFIG: 'barberia_config_v1',
   SESION_BARBERO: 'barberia_sesion_barbero',
   PIN: 'barberia_pin_v1',
-  INTENTOS: 'barberia_pin_intentos_v1'
+  INTENTOS: 'barberia_pin_intentos_v1',
+  BLOQUEOS: 'barberia_bloqueos_v1'
 };
 
-// Servicios oficiales ofrecidos
-export const SERVICIOS = [
-  {
-    id: 'corte-clasico',
-    nombre: 'Corte Clásico & Estilo',
-    duracionMinutos: 45,
-    precio: 15.00,
-    descripcion: 'Lavado previo, corte a tijera o máquina, perfilado de patillas, lavado posterior y peinado con cera mate.'
-  },
-  {
-    id: 'barba-ritual',
-    nombre: 'Ritual de Barba & Toalla Caliente',
-    duracionMinutos: 30,
-    precio: 12.00,
-    descripcion: 'Aceites esenciales, doble toalla caliente al vapor, afeitado tradicional a navaja y bálsamo hidratante.'
-  },
-  {
-    id: 'combo-master',
-    nombre: 'Combo Master (Corte + Barba Completa)',
-    duracionMinutos: 70,
-    precio: 25.00,
-    descripcion: 'El servicio insignia: corte integral, ritual completo de barba, toalla caliente y tratamiento capilar express.'
-  },
-  {
-    id: 'perfilado-express',
-    nombre: 'Perfilado de Barba & Cuello Express',
-    duracionMinutos: 20,
-    precio: 8.00,
-    descripcion: 'Delineado rápido de contornos de barba, bigote y cuello para mantenimiento semanal.'
-  },
-  {
-    id: 'corte-infantil',
-    nombre: 'Corte Infantil (Hasta 12 años)',
-    duracionMinutos: 35,
-    precio: 12.00,
-    descripcion: 'Atención paciente, corte moderno adaptado y peinado con gel suave infantil.'
-  }
-];
+// Configuración centralizada del negocio (Fran Barbe - Cali, Colombia)
+export const NEGOCIO_CONFIG = Object.freeze({
+  nombre: 'Fran Barbe',
+  ciudad: 'Cali, Colombia',
+  ubicacion: 'Sector La Nueva Base / Villa, Cali',
+  telefonoVisible: '+57 300 000 0000',
+  whatsapp: '573000000000',
+  whatsappUrl: 'https://wa.me/573000000000',
+  moneda: 'COP',
+  servicios: [
+    {
+      id: 'basico',
+      nombre: 'Corte Básico',
+      duracionMinutos: 30,
+      precio: 20000,
+      descripcion: 'Corte clásico o degradado a máquina y tijera, perfilado de contornos y acabado limpio.'
+    },
+    {
+      id: 'completo',
+      nombre: 'Corte Completo (Corte + Barba)',
+      duracionMinutos: 45,
+      precio: 30000,
+      descripcion: 'Corte de cabello completo, arreglo y perfilado de barba con detalle adicional.'
+    }
+  ]
+});
+
+// Servicios oficiales ofrecidos (únicamente 2)
+export const SERVICIOS = NEGOCIO_CONFIG.servicios;
+
+// Formato de pesos colombianos sin decimales: 20000 -> $20.000
+export function formatearCOP(valor) {
+  const n = Math.round(Number(valor) || 0);
+  return (n < 0 ? '-$' : '$') + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
 
 // Horarios de atención configurados (Lunes a Sábado de 09:00 a 19:30)
 export const HORARIOS_CONFIG = {
@@ -85,94 +83,19 @@ export function generarSlotsDisponibles() {
   return slots;
 }
 
-// Datos iniciales de demostración para que el sistema tenga vida desde el primer instante
-function generarDatosDemo() {
-  const hoy = formatearFechaISO(new Date());
-  const mananaDate = new Date();
-  mananaDate.setDate(mananaDate.getDate() + 1);
-  const manana = formatearFechaISO(mananaDate);
-
-  return [
-    {
-      id: 'TURNO-DEMO-01',
-      codigo: 'BARB-101',
-      esDemo: true,
-      cliente: 'Carlos Rodríguez',
-      telefono: '+54 9 11 4455-8899',
-      email: 'carlos.r@ejemplo.com',
-      servicioId: 'combo-master',
-      servicioNombre: 'Combo Master (Corte + Barba Completa)',
-      precio: 25.00,
-      fecha: hoy,
-      hora: '10:00',
-      estado: 'confirmado', // pendiente, confirmado, completado, cancelado
-      notas: 'Prefiere degradado bajo (low fade).',
-      creadoEn: new Date(Date.now() - 3600000 * 5).toISOString()
-    },
-    {
-      id: 'TURNO-DEMO-02',
-      codigo: 'BARB-102',
-      esDemo: true,
-      cliente: 'Mariano Benítez',
-      telefono: '+54 9 11 2233-4455',
-      email: 'mariano.b@ejemplo.com',
-      servicioId: 'corte-clasico',
-      servicioNombre: 'Corte Clásico & Estilo',
-      precio: 15.00,
-      fecha: hoy,
-      hora: '11:30',
-      estado: 'confirmado',
-      notas: 'Corte con tijera arriba, nada de cera brillante.',
-      creadoEn: new Date(Date.now() - 3600000 * 3).toISOString()
-    },
-    {
-      id: 'TURNO-DEMO-03',
-      codigo: 'BARB-103',
-      esDemo: true,
-      cliente: 'Lucas Fernández',
-      telefono: '+54 9 11 9988-7766',
-      email: 'lucas.f@ejemplo.com',
-      servicioId: 'barba-ritual',
-      servicioNombre: 'Ritual de Barba & Toalla Caliente',
-      precio: 12.00,
-      fecha: hoy,
-      hora: '15:00',
-      estado: 'confirmado',
-      notas: 'Piel sensible a la navaja en cuello.',
-      creadoEn: new Date(Date.now() - 3600000 * 2).toISOString()
-    },
-    {
-      id: 'TURNO-DEMO-04',
-      codigo: 'BARB-104',
-      esDemo: true,
-      cliente: 'Esteban Morales',
-      telefono: '+54 9 11 3344-5566',
-      email: 'esteban.m@ejemplo.com',
-      servicioId: 'combo-master',
-      servicioNombre: 'Combo Master (Corte + Barba Completa)',
-      precio: 25.00,
-      fecha: manana,
-      hora: '16:30',
-      estado: 'confirmado',
-      notas: 'Cliente nuevo por recomendación.',
-      creadoEn: new Date(Date.now() - 3600000).toISOString()
-    }
-  ];
-}
-
 /**
  * Obtiene todas las reservas almacenadas
  */
 export function obtenerReservas() {
   try {
     const raw = adaptador.leer();
-    if (!raw) {
-      const inicial = generarDatosDemo();
-      guardarReservas(inicial);
-      return inicial;
-    }
+    if (!raw) return []; // La agenda inicia vacía (sin turnos ficticios)
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    // Migración: purga turnos de demostración heredados de versiones anteriores
+    const limpias = parsed.filter((r) => r && r.esDemo !== true);
+    if (limpias.length !== parsed.length) guardarReservas(limpias);
+    return limpias;
   } catch (err) {
     console.error('Error al leer reservas:', err);
     return [];
@@ -213,6 +136,51 @@ export function obtenerHorasOcupadasPorFecha(fecha) {
     .map(r => r.hora);
 }
 
+/* ==========================================================================
+ * BLOQUEO RÁPIDO DE HORARIOS (barbero): franjas no disponibles sin crear turnos
+ * Estructura: { 'YYYY-MM-DD': ['12:00', '12:30'] }
+ * ========================================================================== */
+function leerBloqueos() {
+  try {
+    const b = JSON.parse(localStorage.getItem(STORAGE_KEYS.BLOQUEOS) || '{}');
+    return b && typeof b === 'object' && !Array.isArray(b) ? b : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+export function obtenerHorasBloqueadas(fecha) {
+  const lista = leerBloqueos()[fecha];
+  return Array.isArray(lista) ? lista.filter((h) => RE_HORA.test(h)) : [];
+}
+
+export function estaHoraBloqueada(fecha, hora) {
+  return obtenerHorasBloqueadas(fecha).includes(hora);
+}
+
+// Marca/desmarca una franja. Devuelve true si queda bloqueada, false si queda libre.
+export function alternarBloqueoHora(fecha, hora) {
+  if (!RE_FECHA.test(String(fecha)) || !RE_HORA.test(String(hora)) || !generarSlotsDisponibles().includes(hora)) {
+    throw new Error('Franja horaria inválida.');
+  }
+  const bloqueos = leerBloqueos();
+  const actuales = obtenerHorasBloqueadas(fecha);
+  let bloqueada;
+  if (actuales.includes(hora)) {
+    bloqueos[fecha] = actuales.filter((h) => h !== hora);
+    bloqueada = false;
+  } else {
+    if (estaHorarioOcupado(fecha, hora)) {
+      throw new Error('Esa franja tiene un turno activo; cancélalo primero para bloquearla.');
+    }
+    bloqueos[fecha] = [...actuales, hora].sort();
+    bloqueada = true;
+  }
+  if (bloqueos[fecha].length === 0) delete bloqueos[fecha];
+  localStorage.setItem(STORAGE_KEYS.BLOQUEOS, JSON.stringify(bloqueos));
+  return bloqueada;
+}
+
 /**
  * Crea una nueva reserva evitando duplicados (concurrencia de turnos)
  */
@@ -223,14 +191,19 @@ export function crearReserva(datos) {
     throw new Error(`El horario de las ${datos.hora} para el día ${datos.fecha} ya ha sido reservado. Por favor selecciona otro turno.`);
   }
 
+  if (estaHoraBloqueada(datos.fecha, datos.hora)) {
+    throw new Error(`El horario de las ${datos.hora} no está disponible. Por favor selecciona otro turno.`);
+  }
+
   const servicio = SERVICIOS.find(s => s.id === datos.servicioId);
   const nuevoId = 'TURNO-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-  const codigo = 'BARB-' + Math.floor(1000 + Math.random() * 9000);
+  const existentes = new Set(obtenerReservas().map((r) => r.codigo));
+  let codigo;
+  do { codigo = 'BARB-' + Math.floor(1000 + Math.random() * 9000); } while (existentes.has(codigo));
 
   const nuevaReserva = {
     id: nuevoId,
     codigo,
-    esDemo: false,
     cliente: datos.cliente,
     telefono: datos.telefono,
     email: datos.email,
@@ -274,12 +247,26 @@ export function cancelarReserva(id) {
 }
 
 /**
- * Restablece los datos de demostración
+ * Consulta de la reserva por el cliente: requiere código (BARB-XXXX) + teléfono registrado.
+ * Devuelve null si no coincide (sin revelar cuál dato falló).
  */
-export function restablecerDatosDemo() {
-  const demo = generarDatosDemo();
-  guardarReservas(demo);
-  return demo;
+export function consultarReservaCliente(codigo, telefono) {
+  const cod = sanitizarTexto(codigo, 12).toUpperCase();
+  const tel = normalizarTelefonoCO(telefono);
+  if (!/^BARB-\d{3,4}$/.test(cod) || !tel) return null;
+  return obtenerReservas().find((r) => r.codigo === cod && normalizarTelefonoCO(r.telefono) === tel) || null;
+}
+
+/**
+ * Cancelación por el cliente (código + teléfono): libera el cupo.
+ */
+export function cancelarReservaCliente(codigo, telefono) {
+  const r = consultarReservaCliente(codigo, telefono);
+  if (!r) throw new Error('No encontramos una cita con ese código y teléfono.');
+  if (r.estado === 'cancelado') throw new Error('Esta cita ya estaba cancelada.');
+  if (r.estado === 'completado') throw new Error('Esta cita ya fue atendida.');
+  if (new Date(`${r.fecha}T${r.hora}:00`) <= new Date()) throw new Error('No se puede cancelar una cita que ya pasó.');
+  return cancelarReserva(r.id);
 }
 
 
@@ -335,6 +322,25 @@ export function crearAdaptadorSupabase({ url, anonKey }) {
       });
       if (!r.ok) throw new Error('No se pudo consultar disponibilidad.');
       return r.json();
+    },
+    // Consulta/cancelación del cliente: exige código + teléfono (RPC security definer)
+    async consultarReserva(codigo, telefono) {
+      const r = await fetch(`${url}/rest/v1/rpc/consultar_reserva_cliente`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ p_codigo: codigo, p_telefono: telefono })
+      });
+      if (!r.ok) throw new Error('No se pudo consultar la reserva.');
+      return r.json();
+    },
+    async cancelarReserva(codigo, telefono) {
+      const r = await fetch(`${url}/rest/v1/rpc/cancelar_reserva_cliente`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ p_codigo: codigo, p_telefono: telefono })
+      });
+      if (!r.ok) throw new Error('No se pudo cancelar la reserva.');
+      return r.json();
     }
   };
 }
@@ -374,9 +380,21 @@ export function sanitizarTexto(valor, max = 200) {
 
 const RE_NOMBRE = /^[\p{L}][\p{L}\p{M}' .-]{1,59}$/u;
 const RE_TELEFONO = /^\+?[0-9][0-9 ()-]{6,19}$/;
+const RE_CEL_CO = /^3\d{9}$/;     // celular colombiano: 3XXXXXXXXX
+const RE_CEL_CO_57 = /^573\d{9}$/; // con prefijo +57
 const RE_EMAIL = /^[^\s@<>"']{1,64}@[^\s@<>"']{1,255}\.[A-Za-z]{2,}$/;
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const RE_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// Normaliza un celular colombiano a +573XXXXXXXXX; devuelve null si es inválido.
+// Acepta 3XXXXXXXXX o +57 3XXXXXXXXX (con espacios, guiones o paréntesis).
+export function normalizarTelefonoCO(valor) {
+  const t = sanitizarTexto(valor, 20);
+  if (!RE_TELEFONO.test(t)) return null;
+  const d = t.replace(/\D/g, '');
+  if (t.startsWith('+')) return RE_CEL_CO_57.test(d) ? '+' + d : null;
+  return RE_CEL_CO.test(d) ? '+57' + d : null;
+}
 
 export function validarReserva(datos) {
   if (!datos || typeof datos !== 'object') throw new Error('Datos de reserva inválidos.');
@@ -386,10 +404,9 @@ export function validarReserva(datos) {
     throw new Error('Nombre inválido: use 2 a 60 letras (sin números ni símbolos).');
   }
 
-  const telefono = sanitizarTexto(datos.telefono, 20);
-  const digitos = telefono.replace(/\D/g, '');
-  if (!RE_TELEFONO.test(telefono) || digitos.length < 7 || digitos.length > 15) {
-    throw new Error('Teléfono inválido: use de 7 a 15 dígitos (puede incluir + ( ) - y espacios).');
+  const telefono = normalizarTelefonoCO(datos.telefono);
+  if (!telefono) {
+    throw new Error('Teléfono inválido: use un celular colombiano de 10 dígitos (3XXXXXXXXX) o con prefijo +57.');
   }
 
   const email = sanitizarTexto(datos.email, 120);

@@ -4,8 +4,11 @@ import {
   actualizarEstadoReserva,
   cancelarReserva,
   crearReserva,
-  restablecerDatosDemo,
   formatearFechaISO,
+  formatearCOP,
+  generarSlotsDisponibles,
+  obtenerHorasBloqueadas,
+  alternarBloqueoHora,
   verificarPinBarbero,
   pinConfigurado,
   configurarPinBarbero,
@@ -64,8 +67,8 @@ const manualServicioSelect = document.getElementById('manualServicioSelect');
 const manualFechaInput = document.getElementById('manualFechaInput');
 const manualHoraInput = document.getElementById('manualHoraInput');
 
-// Restablecer Demo
-const btnResetDemo = document.getElementById('btnResetDemo');
+// Bloqueo rápido de horarios
+const bloqueoGrid = document.getElementById('bloqueoGrid');
 
 /**
  * Inicialización
@@ -241,14 +244,6 @@ function configurarEventosAgenda() {
     }
   });
 
-  // Restablecer Demo
-  btnResetDemo.addEventListener('click', () => {
-    if (confirm('¿Deseas restablecer los turnos con los datos de demostración iniciales?')) {
-      restablecerDatosDemo();
-      cargarTurnos();
-      mostrarToast('Datos de demostración restablecidos.', 'info');
-    }
-  });
 }
 
 function cambiarDia(offset) {
@@ -276,6 +271,7 @@ function actualizarTextoFechaTitulo() {
 function cargarTurnos() {
   const todas = obtenerReservas();
   const reservasDia = todas.filter(r => r.fecha === estadoPanel.fechaActual);
+  renderizarBloqueos(todas);
 
   // Calcular métricas del día (independiente de los filtros)
   actualizarMetricas(reservasDia);
@@ -312,7 +308,7 @@ function actualizarMetricas(reservasDia) {
   metTotalTurnos.textContent = total;
   metPendientes.textContent = pendientes;
   metCompletados.textContent = completados;
-  metIngresos.textContent = `$${ingresosProyectados.toFixed(2)}`;
+  metIngresos.textContent = formatearCOP(ingresosProyectados);
 }
 
 /**
@@ -347,19 +343,20 @@ function renderizarListaTurnos(turnos) {
     const card = document.createElement('div');
     const estadoSeguro = ['pendiente', 'confirmado', 'completado', 'cancelado'].includes(t.estado) ? t.estado : 'pendiente';
     const idSeguro = esc(t.id);
+    const telLimpio = String(t.telefono || '').replace(/\D/g, '');
+    const waUrl = telLimpio ? `https://wa.me/${telLimpio}` : '';
     card.className = `turno-card ${estadoSeguro}`;
 
     card.innerHTML = `
       <div class="turno-time">
         <span class="turno-hora">${esc(t.hora)}</span>
-        <span class="turno-duracion">${esc(Number(t.duracionMinutos) || 45)} min</span>
+        <span class="turno-duracion">${esc(Number(t.duracionMinutos) || 30)} min</span>
       </div>
 
       <div class="turno-client">
         <div class="turno-client-top">
           <span class="turno-client-name">${esc(t.cliente)}</span>
           <span class="tag-badge ${estadoSeguro}">${esc(estadoSeguro)}</span>
-          ${t.esDemo ? '<span class="tag-badge demo">Demo</span>' : ''}
         </div>
         <div class="turno-client-contact">
           <span>${esc(t.telefono)}</span>
@@ -370,7 +367,7 @@ function renderizarListaTurnos(turnos) {
 
       <div class="turno-service">
         <div class="turno-service-name">${esc(t.servicioNombre)}</div>
-        <div class="turno-service-meta">$${esc((Number(t.precio) || 0).toFixed(2))}</div>
+        <div class="turno-service-meta">${esc(formatearCOP(t.precio))}</div>
       </div>
 
       <div class="turno-actions">
@@ -426,12 +423,51 @@ function renderizarListaTurnos(turnos) {
   });
 }
 
+/**
+ * Bloqueo rápido: cada franja del día se marca/desmarca como No disponible
+ */
+function renderizarBloqueos(todasLasReservas) {
+  if (!bloqueoGrid) return;
+  const fecha = estadoPanel.fechaActual;
+  const ocupadas = new Set(
+    (todasLasReservas || obtenerReservas())
+      .filter(r => r.fecha === fecha && r.estado !== 'cancelado')
+      .map(r => r.hora)
+  );
+  const bloqueadas = new Set(obtenerHorasBloqueadas(fecha));
+  bloqueoGrid.textContent = '';
+  generarSlotsDisponibles().forEach(hora => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'slot-btn' + (bloqueadas.has(hora) ? ' bloqueado' : '');
+    btn.textContent = hora;
+    btn.dataset.hora = hora;
+    if (ocupadas.has(hora)) {
+      btn.disabled = true;
+      btn.title = 'Con turno activo';
+    } else {
+      btn.title = bloqueadas.has(hora) ? 'Bloqueado: clic para liberar' : 'Libre: clic para bloquear';
+      if (bloqueadas.has(hora)) btn.setAttribute('aria-pressed', 'true');
+      btn.addEventListener('click', () => {
+        try {
+          const ahoraBloqueada = alternarBloqueoHora(fecha, hora);
+          mostrarToast(`${hora} ${ahoraBloqueada ? 'bloqueada (No disponible)' : 'liberada'}.`, 'info');
+        } catch (err) {
+          mostrarToast(err.message, 'error');
+        }
+        renderizarBloqueos();
+      });
+    }
+    bloqueoGrid.appendChild(btn);
+  });
+}
+
 function poblarSelectServiciosManual() {
   manualServicioSelect.innerHTML = '';
   SERVICIOS.forEach(s => {
     const opt = document.createElement('option');
     opt.value = s.id;
-    opt.textContent = `${s.nombre} ($${s.precio.toFixed(2)})`;
+    opt.textContent = `${s.nombre} (${formatearCOP(s.precio)})`;
     manualServicioSelect.appendChild(opt);
   });
 }

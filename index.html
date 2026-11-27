@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Barber Studio | Reserva de Citas</title>
-  <meta name="description" content="Reserva de turnos y citas en Barber Studio. Cortes de precisión y afeitado tradicional.">
+  <title>Fran Barbe | Reserva de Citas en Cali</title>
+  <meta name="description" content="Reserva tu cita en Fran Barbe, barbería en Cali, Colombia. Corte Básico $20.000 y Corte Completo $30.000.">
   <meta name="theme-color" content="#0f1013">
   
   <link rel="manifest" href="manifest.json">
@@ -17,7 +17,7 @@
     <div class="container nav-content">
       <div class="brand">
         <span class="brand-dot"></span>
-        <span>Barber Studio</span>
+        <span>Fran Barbe</span>
       </div>
       <nav class="nav-links">
         <a href="barbero.html" class="nav-btn">
@@ -35,9 +35,9 @@
       <p>Selecciona el servicio y agenda tu horario en pocos pasos.</p>
       
       <div class="hero-meta">
-        <span>Ubicación: <strong>Av. Corrientes 1420</strong></span>
+        <span>Ubicación: <strong>Sector La Nueva Base / Villa, Cali</strong></span>
         <span>Horario: <strong>Lun a Sáb 09:00 — 19:30</strong></span>
-        <span>Contacto: <strong>+54 9 11 4455-6677</strong></span>
+        <span>WhatsApp: <a href="https://wa.me/573000000000" target="_blank" rel="noopener noreferrer"><strong>+57 300 000 0000</strong></a></span>
       </div>
     </div>
   </section>
@@ -103,7 +103,7 @@
 
             <div class="form-group">
               <label for="clienteTelefono" class="form-label">Teléfono o WhatsApp</label>
-              <input type="tel" id="clienteTelefono" class="form-input" placeholder="Ej: +54 9 11 2345-6789" required>
+              <input type="tel" id="clienteTelefono" class="form-input" placeholder="Ej: 3001234567 o +57 300 123 4567" inputmode="tel" required>
             </div>
 
             <div class="form-group">
@@ -132,7 +132,7 @@
               </div>
               <div class="summary-item">
                 <span>Precio</span>
-                <strong id="summaryPrecio" style="color: var(--primary);">$0.00</strong>
+                <strong id="summaryPrecio" style="color: var(--primary);">$0</strong>
               </div>
             </div>
 
@@ -143,6 +143,26 @@
         </div>
 
       </div>
+    </section>
+
+    <!-- Consulta / cancelación por el cliente -->
+    <section class="booking-panel" id="seccionConsulta" style="margin-top: 24px;">
+      <div class="section-header" style="margin-top: 0;">
+        <h2 class="section-title">¿Ya tienes cita? Consulta o cancela con tu código</h2>
+        <p class="section-desc">Ingresa el código de tu reserva (BARB-XXXX) y el teléfono con el que reservaste.</p>
+      </div>
+      <form id="consultaForm" autocomplete="off">
+        <div class="form-group">
+          <label for="consultaCodigo" class="form-label">Código</label>
+          <input type="text" id="consultaCodigo" class="form-input" placeholder="BARB-1234" maxlength="12" required>
+        </div>
+        <div class="form-group">
+          <label for="consultaTelefono" class="form-label">Teléfono registrado</label>
+          <input type="tel" id="consultaTelefono" class="form-input" placeholder="3001234567 o +57 300 123 4567" maxlength="20" inputmode="tel" required>
+        </div>
+        <button type="submit" class="btn-secondary">Consultar mi cita</button>
+      </form>
+      <div id="consultaResultado" role="status" aria-live="polite" style="margin-top: 14px;"></div>
     </section>
 
   </main>
@@ -172,11 +192,11 @@
         </div>
         <div class="ticket-row">
           <span class="ticket-label">Lugar:</span>
-          <span class="ticket-value">Av. Corrientes 1420</span>
+          <span class="ticket-value">Fran Barbe, Sector La Nueva Base / Villa, Cali</span>
         </div>
         <div class="ticket-row">
           <span class="ticket-label">Abonar en local:</span>
-          <span class="ticket-value" id="ticketTotal" style="color: var(--primary); font-weight: 700;">$0.00</span>
+          <span class="ticket-value" id="ticketTotal" style="color: var(--primary); font-weight: 700;">$0</span>
         </div>
       </div>
 
@@ -197,7 +217,7 @@
   <!-- Footer Minimalista -->
   <footer>
     <div class="container">
-      <p>Barber Studio • Sistema de gestión y reservas</p>
+      <p>Fran Barbe • Cali, Colombia • WhatsApp +57 300 000 0000</p>
     </div>
   </footer>
 
