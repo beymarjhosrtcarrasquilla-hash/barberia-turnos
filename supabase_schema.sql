@@ -204,3 +204,62 @@ on conflict (id) do update set
   activo = true;
 -- Si existian servicios de la demo anterior, desactivarlos (sin borrar historial):
 update public.servicios set activo = false where id not in ('corte-basico','corte-completo');
+
+-- Tabla de barberos registrados (escala a multiples barberos)
+create table if not exists public.barberos (
+  id uuid primary key references auth.users(id) on delete cascade,
+  nombre text not null check (char_length(nombre) between 2 and 80),
+  email text not null unique check (char_length(email) <= 120),
+  activo boolean not null default true,
+  creado_en timestamptz not null default now()
+);
+
+alter table public.barberos enable row level security;
+alter table public.barberos force row level security;
+revoke all on public.barberos from anon, authenticated;
+grant select on public.barberos to authenticated;
+
+drop policy if exists barberos_lectura_autenticados on public.barberos;
+create policy barberos_lectura_autenticados on public.barberos
+  for select to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') = 'barbero');
+
+-- Auto-registro seguro de barberos con codigo de invitacion
+create or replace function public.handle_new_barbero()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_invite text;
+  v_nombre text;
+begin
+  v_invite := upper(trim(coalesce(NEW.raw_user_meta_data ->> 'invite_code', '')));
+  if v_invite <> 'FRANBARBE2026' then
+    raise exception 'Código de invitación inválido';
+  end if;
+
+  v_nombre := nullif(trim(coalesce(NEW.raw_user_meta_data ->> 'nombre', '')), '');
+  if v_nombre is null or char_length(v_nombre) < 2 then
+    v_nombre := split_part(coalesce(NEW.email, 'Barbero'), '@', 1);
+  end if;
+
+  update auth.users
+     set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"barbero"}'::jsonb
+   where id = NEW.id;
+
+  insert into public.barberos (id, nombre, email, activo)
+  values (NEW.id, left(v_nombre, 80), coalesce(NEW.email, ''), true)
+  on conflict (id) do update set
+    nombre = excluded.nombre,
+    email = excluded.email,
+    activo = true;
+
+  return NEW;
+end $$;
+
+drop trigger if exists on_auth_user_created_barbero on auth.users;
+create trigger on_auth_user_created_barbero
+  after insert on auth.users
+  for each row execute function public.handle_new_barbero();

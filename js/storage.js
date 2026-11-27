@@ -456,6 +456,36 @@ export function crearAdaptadorSupabase({ url, anonKey }) {
       return sesion;
     },
 
+    async signUp(email, password, nombre, inviteCode) {
+      const r = await fetch(`${baseUrl}/auth/v1/signup`, {
+        method: 'POST',
+        headers: buildHeaders(null),
+        body: JSON.stringify({
+          email: String(email || '').trim(),
+          password: String(password || ''),
+          data: {
+            nombre: String(nombre || '').trim(),
+            invite_code: String(inviteCode || '').trim()
+          }
+        })
+      });
+      if (!r.ok) {
+        throw new Error(await parseError(r, 'No se pudo crear la cuenta de barbero.'));
+      }
+      const data = await r.json();
+      if (data?.access_token) {
+        const sesion = {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_at: Math.floor(Date.now() / 1000) + (Number(data.expires_in) || 3600),
+          user: data.user || null
+        };
+        guardarSesion(sesion);
+        return { sesion, requiereConfirmacion: false };
+      }
+      return { sesion: null, requiereConfirmacion: true, user: data?.user || null };
+    },
+
     async signOut() {
       const sesion = leerSesion();
       if (sesion?.access_token) {
@@ -724,6 +754,20 @@ export function tieneSesionBarberoSupabase() {
 export async function iniciarSesionBarberoSupabase(email, password) {
   if (!esModoSupabase()) throw new Error('El adaptador activo no es Supabase.');
   return adaptador.signIn(email, password);
+}
+
+export async function registrarBarberoSupabase(email, password, nombre, inviteCode) {
+  if (!esModoSupabase()) throw new Error('El adaptador activo no es Supabase.');
+  return adaptador.signUp(email, password, nombre, inviteCode);
+}
+
+export function obtenerBarberoActualSupabase() {
+  if (!esModoSupabase()) return null;
+  const sesion = adaptador.getSession();
+  const user = sesion?.user;
+  if (!user) return null;
+  const nombre = user.user_metadata?.nombre || user.email?.split('@')[0] || 'Barbero';
+  return { id: user.id, email: user.email || '', nombre };
 }
 
 export async function cerrarSesionBarberoSupabase() {

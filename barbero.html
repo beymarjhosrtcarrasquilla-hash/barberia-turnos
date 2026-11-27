@@ -18,6 +18,7 @@
       <div class="brand">
         <span class="brand-dot"></span>
         <span>Portal Barbero</span>
+        <span id="barberoNombreHeader" class="nav-btn" style="display: none; font-size: 0.78rem; padding: 4px 10px; pointer-events: none;"></span>
       </div>
       <nav class="nav-links">
         <a href="index.html" class="nav-btn">
@@ -39,6 +40,15 @@
           Inicia sesión con tu cuenta de barbero en Supabase.
         </p>
 
+        <div id="authTabs" style="display: none; gap: 8px; margin-bottom: 18px;">
+          <button type="button" id="tabLogin" class="nav-btn primary" style="flex: 1; justify-content: center;">
+            Iniciar sesión
+          </button>
+          <button type="button" id="tabRegister" class="nav-btn" style="flex: 1; justify-content: center;">
+            Crear cuenta de barbero
+          </button>
+        </div>
+
         <form id="supabaseAuthForm" style="display: none;">
           <div class="form-group" style="text-align: left;">
             <label for="barberoEmail" class="form-label">Correo electrónico</label>
@@ -51,6 +61,29 @@
           <p id="authMensaje" role="alert" style="color: var(--danger); font-size: 0.82rem; min-height: 1em;"></p>
           <button type="submit" id="authSubmitBtn" class="btn-primary-large" style="margin-top: 10px;">
             Iniciar sesión
+          </button>
+        </form>
+
+        <form id="supabaseRegisterForm" style="display: none;">
+          <div class="form-group" style="text-align: left;">
+            <label for="regNombre" class="form-label">Nombre del barbero</label>
+            <input type="text" id="regNombre" class="form-input" minlength="2" maxlength="80" autocomplete="name" placeholder="Ej: Fran" required>
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label for="regEmail" class="form-label">Correo electrónico</label>
+            <input type="email" id="regEmail" class="form-input" autocomplete="email" placeholder="barbero@franbarbe.com" required>
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label for="regPassword" class="form-label">Contraseña</label>
+            <input type="password" id="regPassword" class="form-input" minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required>
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label for="regInviteCode" class="form-label">Código de invitación del local</label>
+            <input type="text" id="regInviteCode" class="form-input" autocomplete="off" placeholder="Código del local" required>
+          </div>
+          <p id="regMensaje" role="alert" style="color: var(--danger); font-size: 0.82rem; min-height: 1em;"></p>
+          <button type="submit" id="regSubmitBtn" class="btn-primary-large" style="margin-top: 10px;">
+            Crear cuenta
           </button>
         </form>
 

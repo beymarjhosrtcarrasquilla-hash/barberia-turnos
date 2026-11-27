@@ -9,6 +9,8 @@ import {
   alternarDiaCerradoAsync,
   tieneSesionBarberoSupabase,
   iniciarSesionBarberoSupabase,
+  registrarBarberoSupabase,
+  obtenerBarberoActualSupabase,
   cerrarSesionBarberoSupabase,
   formatearFechaISO,
   formatearCOP,
@@ -32,11 +34,22 @@ const estadoPanel = {
 // Elementos DOM de Autenticación
 const authSection = document.getElementById('authSection');
 const adminContent = document.getElementById('adminContent');
+const barberoNombreHeader = document.getElementById('barberoNombreHeader');
+const authTabs = document.getElementById('authTabs');
+const tabLogin = document.getElementById('tabLogin');
+const tabRegister = document.getElementById('tabRegister');
 const supabaseAuthForm = document.getElementById('supabaseAuthForm');
 const barberoEmail = document.getElementById('barberoEmail');
 const barberoPassword = document.getElementById('barberoPassword');
 const authMensaje = document.getElementById('authMensaje');
 const authSubmitBtn = document.getElementById('authSubmitBtn');
+const supabaseRegisterForm = document.getElementById('supabaseRegisterForm');
+const regNombre = document.getElementById('regNombre');
+const regEmail = document.getElementById('regEmail');
+const regPassword = document.getElementById('regPassword');
+const regInviteCode = document.getElementById('regInviteCode');
+const regMensaje = document.getElementById('regMensaje');
+const regSubmitBtn = document.getElementById('regSubmitBtn');
 const pinForm = document.getElementById('pinForm');
 const pinInput = document.getElementById('pinInput');
 const pinConfirmGroup = document.getElementById('pinConfirmGroup');
@@ -100,20 +113,57 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Control de acceso por PIN
  */
+function actualizarCabeceraBarbero(autenticado) {
+  if (!barberoNombreHeader) return;
+  if (!autenticado) {
+    barberoNombreHeader.style.display = 'none';
+    barberoNombreHeader.textContent = '';
+    return;
+  }
+  const barbero = obtenerBarberoActualSupabase();
+  if (barbero?.nombre) {
+    barberoNombreHeader.textContent = `💈 ${barbero.nombre}`;
+    barberoNombreHeader.style.display = 'inline-flex';
+  } else {
+    barberoNombreHeader.style.display = 'none';
+  }
+}
+
+function cambiarTabAuth(modo) {
+  const esRegistro = modo === 'register';
+  if (supabaseAuthForm) supabaseAuthForm.style.display = esRegistro ? 'none' : 'block';
+  if (supabaseRegisterForm) supabaseRegisterForm.style.display = esRegistro ? 'block' : 'none';
+  if (tabLogin) tabLogin.classList.toggle('primary', !esRegistro);
+  if (tabRegister) tabRegister.classList.toggle('primary', esRegistro);
+  if (pinSubtitulo) {
+    pinSubtitulo.textContent = esRegistro
+      ? 'Registra tu cuenta de barbero con el código de invitación del local.'
+      : 'Inicia sesión con tu cuenta de barbero en Supabase.';
+  }
+  if (authMensaje) authMensaje.textContent = '';
+  if (regMensaje) regMensaje.textContent = '';
+  if (esRegistro && regNombre) regNombre.focus();
+  if (!esRegistro && barberoEmail) barberoEmail.focus();
+}
+
 function verificarAutenticacion() {
   if (tieneSesionBarberoSupabase()) {
     authSection.style.display = 'none';
     adminContent.style.display = 'block';
+    actualizarCabeceraBarbero(true);
     cargarTurnos();
   } else {
     authSection.style.display = 'block';
     adminContent.style.display = 'none';
+    actualizarCabeceraBarbero(false);
     if (esModoSupabase()) {
-      if (supabaseAuthForm) supabaseAuthForm.style.display = 'block';
+      if (authTabs) authTabs.style.display = 'flex';
       if (pinForm) pinForm.style.display = 'none';
-      if (barberoEmail) barberoEmail.focus();
+      cambiarTabAuth('login');
     } else {
+      if (authTabs) authTabs.style.display = 'none';
       if (supabaseAuthForm) supabaseAuthForm.style.display = 'none';
+      if (supabaseRegisterForm) supabaseRegisterForm.style.display = 'none';
       if (pinForm) pinForm.style.display = 'block';
       pinInput.focus();
     }
@@ -153,6 +203,8 @@ function configurarEventosAuth() {
   if (esModoSupabase()) {
     pinTitulo.textContent = 'Portal Barbero';
     pinSubtitulo.textContent = 'Inicia sesión con tu correo y contraseña de Supabase.';
+    if (tabLogin) tabLogin.addEventListener('click', () => cambiarTabAuth('login'));
+    if (tabRegister) tabRegister.addEventListener('click', () => cambiarTabAuth('register'));
     if (supabaseAuthForm) {
       supabaseAuthForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -168,6 +220,45 @@ function configurarEventosAuth() {
           mostrarToast(err.message, 'error');
         } finally {
           if (authSubmitBtn) authSubmitBtn.disabled = false;
+        }
+      });
+    }
+    if (supabaseRegisterForm) {
+      supabaseRegisterForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (regMensaje) {
+          regMensaje.style.color = 'var(--danger)';
+          regMensaje.textContent = '';
+        }
+        if (regSubmitBtn) regSubmitBtn.disabled = true;
+        try {
+          const res = await registrarBarberoSupabase(
+            regEmail.value,
+            regPassword.value,
+            regNombre.value,
+            regInviteCode.value
+          );
+          regPassword.value = '';
+          regInviteCode.value = '';
+          if (res.requiereConfirmacion) {
+            if (regMensaje) {
+              regMensaje.style.color = 'var(--success)';
+              regMensaje.textContent = 'Cuenta creada. Revisa tu correo para confirmar tu cuenta y luego inicia sesión.';
+            }
+            mostrarToast('Cuenta creada. Confirma tu correo para iniciar sesión.', 'success');
+          } else {
+            supabaseRegisterForm.reset();
+            verificarAutenticacion();
+            mostrarToast('Cuenta de barbero creada e iniciada correctamente.', 'success');
+          }
+        } catch (err) {
+          if (regMensaje) {
+            regMensaje.style.color = 'var(--danger)';
+            regMensaje.textContent = err.message;
+          }
+          mostrarToast(err.message, 'error');
+        } finally {
+          if (regSubmitBtn) regSubmitBtn.disabled = false;
         }
       });
     }
