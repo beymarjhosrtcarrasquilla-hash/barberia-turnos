@@ -73,6 +73,9 @@ function inicializarContactoNegocio() {
   document.querySelectorAll('[data-negocio-wa]').forEach((el) => {
     el.href = NEGOCIO_CONFIG.whatsappUrl;
   });
+  document.querySelectorAll('[data-negocio-maps]').forEach((el) => {
+    el.href = NEGOCIO_CONFIG.mapsUrl;
+  });
 }
 
 /**
@@ -412,7 +415,7 @@ function mostrarModalConfirmacion(reserva) {
     `📅 Fecha: ${reserva.fecha} a las ${reserva.hora} hs\n` +
     `¡Nos vemos pronto!`
   );
-  // WhatsApp provisional de Fran Barbe
+  // WhatsApp de FrankBarber
   btnWhatsApp.href = `${NEGOCIO_CONFIG.whatsappUrl}?text=${mensajeWhatsApp}`;
 
   // Generador de archivo .ics para Google Calendar y Apple Calendar
@@ -444,7 +447,7 @@ function generarArchivoICS(reserva) {
     `DTEND:${formatoICS(fin)}`,
     `SUMMARY:${NEGOCIO_CONFIG.nombre}: ${reserva.servicioNombre}`,
     `DESCRIPTION:Reserva código ${reserva.codigo} para ${reserva.cliente}.\\nNotas: ${reserva.notas || 'Ninguna'}`,
-    `LOCATION:${NEGOCIO_CONFIG.ubicacion}`,
+    `LOCATION:${NEGOCIO_CONFIG.direccion || NEGOCIO_CONFIG.ubicacion} (${NEGOCIO_CONFIG.mapsUrl})`,
     'STATUS:CONFIRMED',
     'END:VEVENT',
     'END:VCALENDAR'
@@ -454,7 +457,7 @@ function generarArchivoICS(reserva) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `Turno-Barberia-${reserva.codigo}.ics`;
+  link.download = `Turno-FrankBarber-${reserva.codigo}.ics`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

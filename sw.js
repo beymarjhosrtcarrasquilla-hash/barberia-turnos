@@ -1,4 +1,4 @@
-const CACHE_NAME = 'barberia-cache-v3';
+const CACHE_NAME = 'frankbarber-cache-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -35,15 +35,37 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Evitar interceptar LiveReload o peticiones a la API de Supabase
-  if (event.request.url.includes('__live_reload') || event.request.url.includes('supabase.co')) {
+  const url = event.request.url;
+  // Evitar interceptar LiveReload, métodos distintos de GET o peticiones a Supabase
+  if (event.request.method !== 'GET' || url.includes('__live_reload') || url.includes('supabase.co')) {
+    return;
+  }
+
+  // Navegación (incluye rutas limpias de Cloudflare Pages como /barbero y /)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
+          const copy = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return networkResponse;
+      }).catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        const pathname = new URL(url).pathname;
+        if (pathname.endsWith('/barbero') || pathname.endsWith('/barbero.html')) {
+          return caches.match('./barbero.html');
+        }
+        return caches.match('./index.html');
+      })
+    );
     return;
   }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Retornar caché y actualizar en background (stale-while-revalidate)
         fetch(event.request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));

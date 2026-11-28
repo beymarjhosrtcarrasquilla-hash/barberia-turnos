@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fran Barbe | Reserva de Citas en Cali</title>
-  <meta name="description" content="Reserva tu cita en Fran Barbe, barbería en Cali, Colombia. Corte Básico $20.000 y Corte Completo $30.000.">
+  <title>FrankBarber | Reserva de Citas en Cali</title>
+  <meta name="description" content="Reserva tu cita en FrankBarber, barbería en Cali, Colombia. Corte Básico $20.000 y Corte Completo $30.000.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="FrankBarber — Cali | Reserva de Citas">
+  <meta property="og:description" content="Reserva tu turno en FrankBarber (Cali, Colombia). Corte Básico $20.000 y Corte Completo $30.000 COP.">
+  <meta property="og:url" content="https://fran-barbe.pages.dev/">
   <meta name="theme-color" content="#0f1013">
   
   <link rel="manifest" href="manifest.json">
@@ -17,10 +21,10 @@
     <div class="container nav-content">
       <div class="brand">
         <span class="brand-dot"></span>
-        <span data-negocio="nombre">Fran Barbe</span>
+        <span data-negocio="nombre">FrankBarber</span>
       </div>
       <nav class="nav-links">
-        <a href="barbero.html" class="nav-btn">
+        <a href="./barbero.html" class="nav-btn">
           Portal Barbero
         </a>
       </nav>
@@ -35,7 +39,8 @@
       <p>Selecciona el servicio y agenda tu horario en pocos pasos.</p>
       
       <div class="hero-meta">
-        <span>Ubicación: <strong data-negocio="ubicacion">Sector La Nueva Base / Villa, Cali</strong></span>
+        <span>Ubicación: <strong data-negocio="direccion">Calle 63, Las Ceibas / Sector La Nueva Base, Cali</strong></span>
+        <a data-negocio-maps href="https://maps.app.goo.gl/bCyamJJ8cXh65JNDA" target="_blank" rel="noopener noreferrer" class="nav-btn" style="padding: 4px 10px; font-size: 0.8rem;">📍 Ver en Google Maps</a>
         <span>Horario: <strong>Lun a Sáb 09:00 — 19:30</strong></span>
         <span>WhatsApp: <a data-negocio-wa href="https://wa.me/573000000000" target="_blank" rel="noopener noreferrer"><strong data-negocio="telefonoVisible">+57 300 000 0000</strong></a></span>
       </div>
@@ -192,7 +197,7 @@
         </div>
         <div class="ticket-row">
           <span class="ticket-label">Lugar:</span>
-          <span class="ticket-value">Fran Barbe, Sector La Nueva Base / Villa, Cali</span>
+          <span class="ticket-value">FrankBarber — <span data-negocio="direccion">Calle 63, Las Ceibas / Sector La Nueva Base, Cali</span></span>
         </div>
         <div class="ticket-row">
           <span class="ticket-label">Abonar en local:</span>
@@ -217,7 +222,11 @@
   <!-- Footer Minimalista -->
   <footer>
     <div class="container">
-      <p>Fran Barbe • Cali, Colombia • WhatsApp +57 300 000 0000</p>
+      <p>
+        FrankBarber • Cali, Colombia • WhatsApp +57 300 000 0000 •
+        <a data-negocio-maps href="https://maps.app.goo.gl/bCyamJJ8cXh65JNDA" target="_blank" rel="noopener noreferrer" style="text-decoration: underline;">Ver en Google Maps</a> •
+        <a href="./barbero.html" style="text-decoration: underline;">Portal Barbero</a>
+      </p>
     </div>
   </footer>
 

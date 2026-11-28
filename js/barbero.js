@@ -1,4 +1,5 @@
 import {
+  NEGOCIO_CONFIG,
   SERVICIOS,
   esModoSupabase,
   cargarDisponibilidadFecha,
@@ -28,7 +29,7 @@ const LIMITE_RECIENTES = 4;
 const estadoPanel = {
   fechaActual: formatearFechaISO(new Date()),
   filtroEstado: 'todos', // 'todos', 'activos', 'completados', 'cancelados'
-  mostrarTodas: false
+  mostrarTodas: true
 };
 
 // Elementos DOM de Autenticación
@@ -100,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
   verificarAutenticacion();
   configurarEventosAuth();
   configurarEventosAgenda();
+  configurarCompartirClientes();
   poblarSelectServiciosManual();
   if (btnToggleTurnos) {
     btnToggleTurnos.addEventListener('click', () => {
@@ -109,6 +111,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   registrarServiceWorker();
 });
+
+function configurarCompartirClientes() {
+  const urlClientes = NEGOCIO_CONFIG.urlPublica || window.location.origin;
+  const btnCopiar = document.getElementById('btnCopiarEnlace');
+  if (btnCopiar) {
+    btnCopiar.addEventListener('click', async () => {
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(urlClientes);
+        } else {
+          const tmp = document.createElement('input');
+          tmp.value = urlClientes;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand('copy');
+          document.body.removeChild(tmp);
+        }
+        mostrarToast(`Enlace copiado: ${urlClientes}`, 'success');
+      } catch {
+        mostrarToast(`Comparte este enlace: ${urlClientes}`, 'info');
+      }
+    });
+  }
+
+  const btnShareWa = document.getElementById('btnCompartirWhatsApp');
+  if (btnShareWa) {
+    const msg = encodeURIComponent(
+      `Reserva tu turno en ${NEGOCIO_CONFIG.nombre} (Cali) aquí:\n${urlClientes}\n\n✂️ Corte Básico $20.000 | Corte Completo $30.000`
+    );
+    btnShareWa.href = `https://wa.me/?text=${msg}`;
+  }
+}
 
 /**
  * Control de acceso por PIN
@@ -407,10 +441,9 @@ function actualizarTextoFechaTitulo() {
   const [anio, mes, dia] = estadoPanel.fechaActual.split('-');
   const hoyISO = formatearFechaISO(new Date());
 
-  let sufijo = '';
-  if (estadoPanel.fechaActual === hoyISO) sufijo = ' (Hoy)';
-
-  fechaTitulo.textContent = `Agenda del ${dia}/${mes}/${anio}${sufijo}`;
+  fechaTitulo.textContent = estadoPanel.fechaActual === hoyISO
+    ? `Agenda de Hoy (${dia}/${mes}/${anio})`
+    : `Agenda del ${dia}/${mes}/${anio}`;
 }
 
 /**
@@ -458,14 +491,21 @@ function actualizarMetricas(reservasDia) {
   const cancelados = reservasDia.filter(r => r.estado === 'cancelado').length;
   const pendientes = total - completados - cancelados;
 
-  const ingresosProyectados = reservasDia
-    .filter(r => r.estado !== 'cancelado')
+  const cajaDelDia = reservasDia
+    .filter(r => r.estado === 'completado')
     .reduce((sum, r) => sum + (r.precio || 0), 0);
 
   metTotalTurnos.textContent = total;
   metPendientes.textContent = pendientes;
   metCompletados.textContent = completados;
-  metIngresos.textContent = formatearCOP(ingresosProyectados);
+  metIngresos.textContent = formatearCOP(cajaDelDia);
+}
+
+function normalizarTelefonoWhatsApp(telefono) {
+  const digits = String(telefono || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length === 10 && digits.startsWith('3')) return `57${digits}`;
+  return digits;
 }
 
 /**
@@ -500,8 +540,11 @@ function renderizarListaTurnos(turnos) {
     const card = document.createElement('div');
     const estadoSeguro = ['pendiente', 'confirmado', 'completado', 'cancelado'].includes(t.estado) ? t.estado : 'pendiente';
     const idSeguro = esc(t.id);
-    const telLimpio = String(t.telefono || '').replace(/\D/g, '');
-    const waUrl = telLimpio ? `https://wa.me/${telLimpio}` : '';
+    const telWa = normalizarTelefonoWhatsApp(t.telefono);
+    const msgRecordatorio = encodeURIComponent(
+      `Hola ${t.cliente}, te recordamos tu turno en ${NEGOCIO_CONFIG.nombre} el ${t.fecha} a las ${t.hora} (${t.servicioNombre}). ¡Te esperamos!`
+    );
+    const waUrl = telWa ? `https://wa.me/${telWa}?text=${msgRecordatorio}` : '';
     card.className = `turno-card ${estadoSeguro}`;
 
     card.innerHTML = `
@@ -513,11 +556,10 @@ function renderizarListaTurnos(turnos) {
       <div class="turno-client">
         <div class="turno-client-top">
           <span class="turno-client-name">${esc(t.cliente)}</span>
-          <span class="tag-badge ${estadoSeguro}">${esc(estadoSeguro)}</span>
+          <span class="tag-badge ${estadoSeguro}">${esc(estadoSeguro === 'completado' ? 'atendido' : estadoSeguro)}</span>
         </div>
         <div class="turno-client-contact">
           <span>${esc(t.telefono)}</span>
-          ${telLimpio ? `<a href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" style="font-weight:600; color:#25d366;">WhatsApp</a>` : ''}
         </div>
         ${t.notas ? `<p class="turno-nota">${esc(t.notas)}</p>` : ''}
       </div>
@@ -529,17 +571,23 @@ function renderizarListaTurnos(turnos) {
 
       <div class="turno-actions">
         ${estadoSeguro !== 'completado' && estadoSeguro !== 'cancelado' ? `
-          <button type="button" class="nav-btn" data-action="completar" data-id="${idSeguro}" title="Marcar como atendido" style="color: var(--success); border-color: var(--success);">
-            ✓ Listo
+          <button type="button" class="nav-btn action-btn action-atendido" data-action="completar" data-id="${idSeguro}" title="Marcar como atendido y sumar a Caja del Día">
+            ✓ Atendido
           </button>
         ` : ''}
 
+        ${telWa ? `
+          <a href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" class="nav-btn action-btn action-whatsapp" title="Enviar recordatorio por WhatsApp">
+            💬 WhatsApp
+          </a>
+        ` : ''}
+
         ${estadoSeguro !== 'cancelado' ? `
-          <button type="button" class="nav-btn" data-action="cancelar" data-id="${idSeguro}" title="Cancelar turno" style="color: var(--danger); border-color: var(--danger);">
+          <button type="button" class="nav-btn action-btn action-cancelar" data-action="cancelar" data-id="${idSeguro}" title="Cancelar turno y liberar cupo">
             ✕ Cancelar
           </button>
         ` : `
-          <button type="button" class="nav-btn" data-action="reactivar" data-id="${idSeguro}" title="Reactivar reserva">
+          <button type="button" class="nav-btn action-btn" data-action="reactivar" data-id="${idSeguro}" title="Reactivar reserva">
             ↺ Reactivar
           </button>
         `}

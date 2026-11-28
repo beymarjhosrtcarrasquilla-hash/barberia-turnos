@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal Barbero | Fran Barbe</title>
+  <title>Portal Barbero | FrankBarber — Cali</title>
+  <meta name="description" content="Panel de gestión de citas de FrankBarber en Cali, Colombia. Corte Básico $20.000 y Corte Completo $30.000.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Portal Barbero | FrankBarber — Cali">
+  <meta property="og:description" content="Agenda y gestión diaria de FrankBarber en Cali. Corte Básico $20.000 y Corte Completo $30.000 COP.">
+  <meta property="og:url" content="https://fran-barbe.pages.dev/barbero">
   <meta name="theme-color" content="#0f1217">
   
   <link rel="manifest" href="manifest.json">
@@ -17,12 +22,18 @@
     <div class="container nav-content">
       <div class="brand">
         <span class="brand-dot"></span>
-        <span>Portal Barbero</span>
+        <span>FrankBarber • Barbero</span>
         <span id="barberoNombreHeader" class="nav-btn" style="display: none; font-size: 0.78rem; padding: 4px 10px; pointer-events: none;"></span>
       </div>
-      <nav class="nav-links">
-        <a href="index.html" class="nav-btn">
-          Vista Clientes
+      <nav class="nav-links" style="flex-wrap: wrap;">
+        <a href="./index.html" class="nav-btn">
+          ← Portal Clientes
+        </a>
+        <button type="button" id="btnCopiarEnlace" class="nav-btn" title="Copiar enlace de reservas para clientes">
+          🔗 Copiar enlace clientes
+        </button>
+        <a id="btnCompartirWhatsApp" href="https://wa.me/" target="_blank" rel="noopener noreferrer" class="nav-btn" style="color: #25d366; border-color: rgba(37, 211, 102, 0.35);">
+          📲 Compartir por WhatsApp
         </a>
         <button type="button" id="btnLogout" class="nav-btn" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.2);">
           Salir
@@ -52,7 +63,7 @@
         <form id="supabaseAuthForm" style="display: none;">
           <div class="form-group" style="text-align: left;">
             <label for="barberoEmail" class="form-label">Correo electrónico</label>
-            <input type="email" id="barberoEmail" class="form-input" autocomplete="email" placeholder="barbero@franbarbe.com" required>
+            <input type="email" id="barberoEmail" class="form-input" autocomplete="email" placeholder="barbero@frankbarber.com" required>
           </div>
           <div class="form-group" style="text-align: left;">
             <label for="barberoPassword" class="form-label">Contraseña</label>
@@ -67,11 +78,11 @@
         <form id="supabaseRegisterForm" style="display: none;">
           <div class="form-group" style="text-align: left;">
             <label for="regNombre" class="form-label">Nombre del barbero</label>
-            <input type="text" id="regNombre" class="form-input" minlength="2" maxlength="80" autocomplete="name" placeholder="Ej: Fran" required>
+            <input type="text" id="regNombre" class="form-input" minlength="2" maxlength="80" autocomplete="name" placeholder="Ej: Frank" required>
           </div>
           <div class="form-group" style="text-align: left;">
             <label for="regEmail" class="form-label">Correo electrónico</label>
-            <input type="email" id="regEmail" class="form-input" autocomplete="email" placeholder="barbero@franbarbe.com" required>
+            <input type="email" id="regEmail" class="form-input" autocomplete="email" placeholder="barbero@frankbarber.com" required>
           </div>
           <div class="form-group" style="text-align: left;">
             <label for="regPassword" class="form-label">Contraseña</label>
@@ -106,10 +117,10 @@
   <!-- CONTENIDO PRINCIPAL DEL PANEL BARBERO -->
   <main id="adminContent" class="container" style="display: none; padding-top: 24px;">
 
-    <!-- Métricas del Día -->
+    <!-- Métricas del Día (Hoy) -->
     <section class="metrics-bar">
       <div class="metric-card">
-        <span class="metric-title">Turnos Hoy</span>
+        <span class="metric-title">Citas Hoy</span>
         <span class="metric-value" id="metTotalTurnos">0</span>
       </div>
       <div class="metric-card">
@@ -117,11 +128,11 @@
         <span class="metric-value highlight" id="metPendientes">0</span>
       </div>
       <div class="metric-card">
-        <span class="metric-title">Completados</span>
+        <span class="metric-title">Atendidas</span>
         <span class="metric-value" id="metCompletados" style="color: var(--success);">0</span>
       </div>
       <div class="metric-card">
-        <span class="metric-title">Ingresos</span>
+        <span class="metric-title">Caja del Día</span>
         <span class="metric-value highlight" id="metIngresos">$0</span>
       </div>
     </section>
@@ -242,7 +253,7 @@
   <!-- Pie de Página -->
   <footer>
     <div class="container">
-      <p>© 2026 Fran Barbe • Cali, Colombia • Panel de Gestión de Turnos</p>
+      <p>© 2026 FrankBarber • Cali, Colombia • Panel de Gestión de Turnos • <a href="./index.html" style="text-decoration: underline;">← Portal Clientes</a></p>
     </div>
   </footer>
 

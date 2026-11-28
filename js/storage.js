@@ -17,11 +17,14 @@ const STORAGE_KEYS = {
   DIAS_CERRADOS: 'barberia_dias_cerrados_v1'
 };
 
-// Configuración centralizada del negocio (Fran Barbe - Cali, Colombia)
+// Configuración centralizada del negocio (FrankBarber - Cali, Colombia)
 export const NEGOCIO_CONFIG = Object.freeze({
-  nombre: 'Fran Barbe',
+  nombre: 'FrankBarber',
   ciudad: 'Cali, Colombia',
   ubicacion: 'Sector La Nueva Base / Villa, Cali',
+  direccion: 'Calle 63, Las Ceibas / Sector La Nueva Base, Cali',
+  mapsUrl: 'https://maps.app.goo.gl/bCyamJJ8cXh65JNDA',
+  urlPublica: 'https://fran-barbe.pages.dev',
   telefonoVisible: '+57 300 000 0000',
   whatsapp: '573000000000',
   whatsappUrl: 'https://wa.me/573000000000',
