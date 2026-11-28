@@ -159,6 +159,10 @@ function configurarCompartirClientes() {
  * Control de acceso por PIN
  */
 function actualizarCabeceraBarbero(autenticado) {
+  const btnCopiar = document.getElementById('btnCopiarEnlace');
+  if (btnCopiar) {
+    btnCopiar.style.display = autenticado ? 'inline-flex' : 'none';
+  }
   if (!barberoNombreHeader) return;
   if (!autenticado) {
     barberoNombreHeader.style.display = 'none';
