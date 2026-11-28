@@ -55,12 +55,26 @@ const consultaResultado = document.getElementById('consultaResultado');
 document.addEventListener('DOMContentLoaded', () => {
   renderizarServicios();
   inicializarContactoNegocio();
+  configurarCompartirWhatsApp();
   inicializarSelectorFecha();
   configurarConsultaCita();
   configurarEventosFormulario();
   actualizarResumen();
   registrarServiceWorker();
 });
+
+/**
+ * Configura el botón de compartir por WhatsApp en el Portal del Cliente
+ */
+function configurarCompartirWhatsApp() {
+  const btnShareWa = document.getElementById('btnCompartirWhatsApp');
+  if (!btnShareWa) return;
+  const urlPublica = NEGOCIO_CONFIG.urlPublica || 'https://fran-barbe.pages.dev';
+  const mensaje = encodeURIComponent(
+    `Agenda tu corte en ${NEGOCIO_CONFIG.nombre} (Cali) aquí: ${urlPublica}`
+  );
+  btnShareWa.href = `https://wa.me/?text=${mensaje}`;
+}
 
 /**
  * Refleja los datos del negocio (NEGOCIO_CONFIG) en los elementos marcados con data-negocio

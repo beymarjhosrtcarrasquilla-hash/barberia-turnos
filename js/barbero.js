@@ -113,35 +113,44 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function configurarCompartirClientes() {
-  const urlClientes = NEGOCIO_CONFIG.urlPublica || window.location.origin;
+  const urlClientes = NEGOCIO_CONFIG.urlPublica || 'https://fran-barbe.pages.dev';
   const btnCopiar = document.getElementById('btnCopiarEnlace');
-  if (btnCopiar) {
-    btnCopiar.addEventListener('click', async () => {
-      try {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(urlClientes);
-        } else {
-          const tmp = document.createElement('input');
-          tmp.value = urlClientes;
-          document.body.appendChild(tmp);
-          tmp.select();
-          document.execCommand('copy');
-          document.body.removeChild(tmp);
-        }
-        mostrarToast(`Enlace copiado: ${urlClientes}`, 'success');
-      } catch {
-        mostrarToast(`Comparte este enlace: ${urlClientes}`, 'info');
-      }
-    });
-  }
+  if (!btnCopiar) return;
 
-  const btnShareWa = document.getElementById('btnCompartirWhatsApp');
-  if (btnShareWa) {
-    const msg = encodeURIComponent(
-      `Reserva tu turno en ${NEGOCIO_CONFIG.nombre} (Cali) aquí:\n${urlClientes}\n\n✂️ Corte Básico $20.000 | Corte Completo $30.000`
-    );
-    btnShareWa.href = `https://wa.me/?text=${msg}`;
-  }
+  const textoOriginal = btnCopiar.textContent.trim();
+  let timerFeedback = null;
+
+  btnCopiar.addEventListener('click', async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(urlClientes);
+      } else {
+        const tmp = document.createElement('textarea');
+        tmp.value = urlClientes;
+        tmp.setAttribute('readonly', '');
+        tmp.style.position = 'fixed';
+        tmp.style.opacity = '0';
+        document.body.appendChild(tmp);
+        tmp.focus();
+        tmp.select();
+        tmp.setSelectionRange(0, urlClientes.length);
+        const copiado = document.execCommand('copy');
+        document.body.removeChild(tmp);
+        if (!copiado) {
+          throw new Error('execCommand copy failed');
+        }
+      }
+
+      mostrarToast('¡Link copiado! Pégalo en tu historia o chat', 'success');
+      btnCopiar.textContent = '✅ ¡Link copiado!';
+      clearTimeout(timerFeedback);
+      timerFeedback = setTimeout(() => {
+        btnCopiar.textContent = textoOriginal;
+      }, 2500);
+    } catch {
+      mostrarToast(`Copia este enlace: ${urlClientes}`, 'info');
+    }
+  });
 }
 
 /**
