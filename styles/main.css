@@ -170,6 +170,10 @@ a:hover {
   text-align: left;
 }
 
+.hero .container {
+  position: relative;
+}
+
 .hero-tag {
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -889,32 +893,44 @@ footer {
   background: rgba(239, 68, 68, 0.08);
 }
 
-/* Ventanita compacta de ubicación en Cali */
+/* Ventanita mini y discreta de ubicación en Cali */
 .location-card {
-  margin-top: 18px;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(197, 160, 89, 0.22);
-  background:
-    linear-gradient(135deg, rgba(197, 160, 89, 0.07), rgba(21, 23, 28, 0.94) 55%),
-    var(--bg-card);
-  display: flex;
+  position: absolute;
+  top: 0;
+  right: 20px;
+  display: inline-flex;
   align-items: center;
-  gap: 14px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(21, 23, 28, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  opacity: 0.78;
+  text-decoration: none;
+  transition: opacity 0.25s ease, transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+.location-card:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+  border-color: rgba(197, 160, 89, 0.35);
+  background: rgba(21, 23, 28, 0.85);
 }
 
 .location-pin-box {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(197, 160, 89, 0.3);
-  background-color: rgba(197, 160, 89, 0.1);
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(197, 160, 89, 0.22);
+  background-color: rgba(197, 160, 89, 0.08);
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 11px 11px;
-  color: var(--primary);
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 8px 8px;
+  color: rgba(197, 160, 89, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -922,65 +938,35 @@ footer {
 }
 
 .location-pin-box svg {
-  width: 22px;
-  height: 22px;
+  width: 13px;
+  height: 13px;
 }
 
 .location-info {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  min-width: 0;
 }
 
-.location-badge {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--primary);
+.location-title {
+  font-size: 0.7rem;
   font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+  line-height: 1.2;
 }
 
-.location-address {
-  font-size: 0.92rem;
-  color: #fff;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.location-hours {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.location-map-btn {
-  padding: 9px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(197, 160, 89, 0.45);
-  background: rgba(197, 160, 89, 0.12);
-  color: var(--primary);
-  font-size: 0.83rem;
-  font-weight: 600;
+.location-sub {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  line-height: 1.2;
   white-space: nowrap;
-  flex-shrink: 0;
-  transition: var(--transition);
 }
 
-.location-map-btn:hover {
-  background: var(--primary);
-  color: #0f1013;
-  border-color: var(--primary);
-}
-
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .location-card {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .location-map-btn {
-    width: 100%;
-    text-align: center;
+    position: static;
+    margin-top: 12px;
   }
 }
