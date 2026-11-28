@@ -9,6 +9,7 @@ import {
   formatearFechaISO,
   formatearCOP,
   escaparHTML,
+  inicializarContactoNegocio,
   inicializarModalSoporte
 } from './storage.js';
 
@@ -76,22 +77,6 @@ function configurarCompartirWhatsApp() {
     `Agenda tu corte en ${NEGOCIO_CONFIG.nombre} (Cali) aquí: ${urlPublica}`
   );
   btnShareWa.href = `https://wa.me/?text=${mensaje}`;
-}
-
-/**
- * Refleja los datos del negocio (NEGOCIO_CONFIG) en los elementos marcados con data-negocio
- */
-function inicializarContactoNegocio() {
-  document.querySelectorAll('[data-negocio]').forEach((el) => {
-    const v = NEGOCIO_CONFIG[el.dataset.negocio];
-    if (v) el.textContent = v;
-  });
-  document.querySelectorAll('[data-negocio-wa]').forEach((el) => {
-    el.href = NEGOCIO_CONFIG.whatsappUrl;
-  });
-  document.querySelectorAll('[data-negocio-maps]').forEach((el) => {
-    el.href = NEGOCIO_CONFIG.mapsUrl;
-  });
 }
 
 /**

@@ -28,6 +28,8 @@ export const NEGOCIO_CONFIG = Object.freeze({
   telefonoVisible: '+57 300 000 0000',
   whatsapp: '573000000000',
   whatsappUrl: 'https://wa.me/573000000000',
+  instagram: '@frankbarber',
+  instagramUrl: 'https://www.instagram.com/frankbarber/',
   moneda: 'COP',
   servicios: [
     {
@@ -779,6 +781,25 @@ export async function enviarTicketSoporteAsync({ origen, mensaje, contactoOpcion
   const pag = sanitizarTexto(pagina, 120);
   if (!esModoSupabase()) return { ok: true, local: true };
   return adaptador.enviarTicketSoporte({ origen: origenVal, mensaje: msg, contactoOpcional: contacto, pagina: pag });
+}
+
+/**
+ * Refleja los datos del negocio (NEGOCIO_CONFIG) en los elementos marcados con data-negocio*
+ */
+export function inicializarContactoNegocio() {
+  document.querySelectorAll('[data-negocio]').forEach((el) => {
+    const v = NEGOCIO_CONFIG[el.dataset.negocio];
+    if (v) el.textContent = v;
+  });
+  document.querySelectorAll('[data-negocio-wa]').forEach((el) => {
+    if (NEGOCIO_CONFIG.whatsappUrl) el.href = NEGOCIO_CONFIG.whatsappUrl;
+  });
+  document.querySelectorAll('[data-negocio-ig]').forEach((el) => {
+    if (NEGOCIO_CONFIG.instagramUrl) el.href = NEGOCIO_CONFIG.instagramUrl;
+  });
+  document.querySelectorAll('[data-negocio-maps]').forEach((el) => {
+    if (NEGOCIO_CONFIG.mapsUrl) el.href = NEGOCIO_CONFIG.mapsUrl;
+  });
 }
 
 /**

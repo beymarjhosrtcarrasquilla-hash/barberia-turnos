@@ -22,6 +22,7 @@ import {
   segundosBloqueoRestantes,
   escaparHTML,
   guardarSesionBarbero,
+  inicializarContactoNegocio,
   inicializarModalSoporte
 } from './storage.js';
 
@@ -104,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
   configurarEventosAgenda();
   configurarCompartirClientes();
   poblarSelectServiciosManual();
+  inicializarContactoNegocio();
   inicializarModalSoporte({ defaultOrigen: 'barbero', onToast: mostrarToast });
   if (btnToggleTurnos) {
     btnToggleTurnos.addEventListener('click', () => {
