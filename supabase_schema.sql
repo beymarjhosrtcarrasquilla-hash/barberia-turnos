@@ -18,7 +18,7 @@ create table if not exists public.reservas (
   id uuid primary key default gen_random_uuid(),
   codigo text not null unique default ('BARB-' || floor(1000 + random() * 9000)::int),
   cliente text not null check (char_length(cliente) between 2 and 60),
-  telefono text not null check (telefono ~ '^\+573[0-9]{9}$') -- celular colombiano normalizado +573XXXXXXXXX,
+  telefono text not null check (telefono ~ '^\+573[0-9]{9}$'), -- celular colombiano normalizado +573XXXXXXXXX
   email text check (email is null or char_length(email) <= 120),
   servicio_id text not null references public.servicios(id),
   fecha date not null,

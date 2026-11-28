@@ -8,7 +8,8 @@ import {
   cancelarReservaClienteAsync,
   formatearFechaISO,
   formatearCOP,
-  escaparHTML
+  escaparHTML,
+  inicializarModalSoporte
 } from './storage.js';
 
 // Estado de la reserva en curso
@@ -59,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
   inicializarSelectorFecha();
   configurarConsultaCita();
   configurarEventosFormulario();
+  inicializarModalSoporte({ defaultOrigen: 'cliente', onToast: mostrarToast });
   actualizarResumen();
   registrarServiceWorker();
 });
@@ -361,6 +363,15 @@ function actualizarResumen() {
 function configurarEventosFormulario() {
   bookingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // Campo trampa invisible (honeypot): descarta bots silenciosamente
+    const honeypot = document.getElementById('empresaUrl')?.value.trim();
+    if (honeypot) {
+      bookingForm.reset();
+      mostrarToast('¡Tu turno ha sido confirmado con éxito!', 'success');
+      actualizarResumen();
+      return;
+    }
 
     const nombre = document.getElementById('clienteNombre').value.trim();
     const telefono = document.getElementById('clienteTelefono').value.trim();

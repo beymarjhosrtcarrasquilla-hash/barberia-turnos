@@ -21,7 +21,8 @@ import {
   configurarPinBarbero,
   segundosBloqueoRestantes,
   escaparHTML,
-  guardarSesionBarbero
+  guardarSesionBarbero,
+  inicializarModalSoporte
 } from './storage.js';
 
 // Estado del panel del barbero
@@ -103,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
   configurarEventosAgenda();
   configurarCompartirClientes();
   poblarSelectServiciosManual();
+  inicializarModalSoporte({ defaultOrigen: 'barbero', onToast: mostrarToast });
   if (btnToggleTurnos) {
     btnToggleTurnos.addEventListener('click', () => {
       estadoPanel.mostrarTodas = !estadoPanel.mostrarTodas;

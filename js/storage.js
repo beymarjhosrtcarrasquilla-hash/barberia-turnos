@@ -684,6 +684,22 @@ export function crearAdaptadorSupabase({ url, anonKey }) {
       );
       if (!r.ok) throw new Error(await parseError(r, 'No se pudo reabrir el día.'));
       return false;
+    },
+
+    async enviarTicketSoporte({ origen, mensaje, contactoOpcional, pagina }) {
+      const r = await fetch(`${baseUrl}/rest/v1/soporte_tickets`, {
+        method: 'POST',
+        headers: buildHeaders(null, { Prefer: 'return=minimal' }),
+        body: JSON.stringify({
+          origen,
+          mensaje,
+          contacto_opcional: contactoOpcional || '',
+          pagina: pagina || '',
+          estado: 'nuevo'
+        })
+      });
+      if (!r.ok) throw new Error(await parseError(r, 'No se pudo enviar el reporte de soporte.'));
+      return { ok: true };
     }
   };
 }
@@ -748,6 +764,88 @@ export async function cancelarReservaClienteAsync(codigo, telefono) {
   }
   await adaptador.cancelarReserva(cod, tel);
   return consultarReservaClienteAsync(cod, tel);
+}
+
+/**
+ * Envía un ticket al Buzón Privado de Soporte (soporte_tickets)
+ */
+export async function enviarTicketSoporteAsync({ origen, mensaje, contactoOpcional = '', pagina = '' }) {
+  const origenVal = origen === 'barbero' ? 'barbero' : 'cliente';
+  const msg = sanitizarTexto(mensaje, 600);
+  if (msg.length < 5) {
+    throw new Error('Describe el problema con al menos 5 caracteres.');
+  }
+  const contacto = sanitizarTexto(contactoOpcional, 80);
+  const pag = sanitizarTexto(pagina, 120);
+  if (!esModoSupabase()) return { ok: true, local: true };
+  return adaptador.enviarTicketSoporte({ origen: origenVal, mensaje: msg, contactoOpcional: contacto, pagina: pag });
+}
+
+/**
+ * Conecta el botón y modal de Soporte / Reportar falla con cooldown local de 60s
+ */
+export function inicializarModalSoporte({ defaultOrigen = 'cliente', onToast = () => {} } = {}) {
+  const btnAbrir = document.getElementById('btnAbrirSoporte');
+  const modal = document.getElementById('soporteModal');
+  const form = document.getElementById('soporteForm');
+  const btnCerrar = document.getElementById('btnCerrarSoporte');
+  const selOrigen = document.getElementById('soporteOrigen');
+  const txtMensaje = document.getElementById('soporteMensaje');
+  const inpContacto = document.getElementById('soporteContacto');
+  const btnEnviar = document.getElementById('btnEnviarSoporte');
+  if (!btnAbrir || !modal || !form) return;
+
+  const COOLDOWN_KEY = 'frankbarber_soporte_ultimo_envio';
+  const COOLDOWN_MS = 60000;
+
+  const abrir = () => {
+    if (selOrigen) selOrigen.value = defaultOrigen === 'barbero' ? 'barbero' : 'cliente';
+    modal.classList.add('active');
+    if (txtMensaje) txtMensaje.focus();
+  };
+  const cerrar = () => modal.classList.remove('active');
+
+  btnAbrir.addEventListener('click', abrir);
+  if (btnCerrar) btnCerrar.addEventListener('click', cerrar);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) cerrar();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ultimo = Number(localStorage.getItem(COOLDOWN_KEY) || 0);
+    const restante = Math.ceil((ultimo + COOLDOWN_MS - Date.now()) / 1000);
+    if (restante > 0) {
+      onToast(`Espera ${restante}s antes de enviar otro reporte.`, 'error');
+      return;
+    }
+
+    const origen = selOrigen?.value || defaultOrigen;
+    const mensaje = txtMensaje?.value.trim() || '';
+    const contactoOpcional = inpContacto?.value.trim() || '';
+    if (mensaje.length < 5) {
+      onToast('Describe el problema con al menos 5 caracteres.', 'error');
+      return;
+    }
+
+    if (btnEnviar) btnEnviar.disabled = true;
+    try {
+      await enviarTicketSoporteAsync({
+        origen,
+        mensaje,
+        contactoOpcional,
+        pagina: window.location.pathname || ''
+      });
+      localStorage.setItem(COOLDOWN_KEY, String(Date.now()));
+      form.reset();
+      cerrar();
+      onToast('Reporte enviado al soporte técnico. ¡Gracias!', 'success');
+    } catch (err) {
+      onToast(err.message || 'No se pudo enviar el reporte.', 'error');
+    } finally {
+      if (btnEnviar) btnEnviar.disabled = false;
+    }
+  });
 }
 
 export function tieneSesionBarberoSupabase() {

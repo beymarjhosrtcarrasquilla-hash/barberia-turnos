@@ -247,10 +247,41 @@
     </div>
   </div>
 
+  <!-- Modal Buzón Privado de Soporte -->
+  <div class="modal-overlay" id="soporteModal" role="dialog" aria-modal="true" aria-labelledby="soporteTitulo">
+    <div class="modal-card">
+      <h2 id="soporteTitulo" style="margin-bottom: 6px; font-size: 1.25rem;">Soporte / Reportar falla</h2>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 14px;">
+        Envía un reporte privado al equipo técnico. No compartas contraseñas ni datos sensibles.
+      </p>
+      <form id="soporteForm">
+        <div class="form-group">
+          <label for="soporteOrigen" class="form-label">Soy</label>
+          <select id="soporteOrigen" class="form-input" required>
+            <option value="cliente">Cliente</option>
+            <option value="barbero" selected>Barbero</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="soporteMensaje" class="form-label">Descripción del problema</label>
+          <textarea id="soporteMensaje" class="form-textarea" rows="3" minlength="5" maxlength="600" placeholder="Cuéntanos qué ocurrió o qué falla encontraste..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="soporteContacto" class="form-label">Contacto para respuesta (opcional)</label>
+          <input type="text" id="soporteContacto" class="form-input" maxlength="80" placeholder="WhatsApp o correo (opcional)">
+        </div>
+        <div class="modal-actions" style="flex-direction: row; gap: 10px;">
+          <button type="submit" id="btnEnviarSoporte" class="btn-primary-large" style="margin-top: 0;">Enviar reporte</button>
+          <button type="button" id="btnCerrarSoporte" class="btn-secondary" style="width: auto; padding: 0 16px;">Cerrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Pie de Página -->
   <footer>
     <div class="container">
-      <p>© 2026 FrankBarber • Cali, Colombia • Panel de Gestión de Turnos • <a href="./index.html" style="text-decoration: underline;">← Portal Clientes</a></p>
+      <p>© 2026 FrankBarber • Cali, Colombia • Panel de Gestión de Turnos • <a href="./index.html" style="text-decoration: underline;">← Portal Clientes</a> • <button type="button" id="btnAbrirSoporte" style="background: none; border: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; padding: 0;">Soporte / Reportar falla</button></p>
     </div>
   </footer>
 
